@@ -1,47 +1,51 @@
-﻿version: '3.5'
-
-services:
-  Implem.Pleasanter:
-    build:
-      context: .
-      dockerfile: ./Implem.Pleasanter/Dockerfile
-    environment:
-        - Implem.Pleasanter_Rds_PostgreSQL_SaConnectionString=${Implem_Pleasanter_Rds_PostgreSQL_SaConnectionString}
-        - Implem.Pleasanter_Rds_PostgreSQL_OwnerConnectionString=${Implem_Pleasanter_Rds_PostgreSQL_OwnerConnectionString}
-        - Implem.Pleasanter_Rds_PostgreSQL_UserConnectionString=${Implem_Pleasanter_Rds_PostgreSQL_UserConnectionString}
-    image: implem.pleasanter
-    container_name: pleasanter
-    depends_on:
-      - db
-    networks:
-      - default
-  Implem.CodeDefiner:
-    build:
-      context: .
-      dockerfile: ./Implem.CodeDefiner/Dockerfile
-    environment:
-        - Implem.Pleasanter_Rds_PostgreSQL_SaConnectionString=${Implem_Pleasanter_Rds_PostgreSQL_SaConnectionString}
-        - Implem.Pleasanter_Rds_PostgreSQL_OwnerConnectionString=${Implem_Pleasanter_Rds_PostgreSQL_OwnerConnectionString}
-        - Implem.Pleasanter_Rds_PostgreSQL_UserConnectionString=${Implem_Pleasanter_Rds_PostgreSQL_UserConnectionString}
-    image: implem.codedefiner
-    container_name: codedefiner
-    depends_on:
-      - db
-    networks:
-      - default
+﻿services:
   db:
-    container_name: postgresql
+    container_name: postgres
     image: postgres:15
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+      - POSTGRES_USER=SAUSER
+      - POSTGRES_PASSWORD=SAPASSWORD
+      - POSTGRES_DB=DB
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_INITDB_ARGS
     ports:
-      - "5432:5432"
-    networks:
-      - default
-networks:
-  default:
-    name: pleasanternetwork
+      - '5432:5432'
+    volumes:
+      - type: volume
+        source: pg_data
+        target: /var/lib/postgresql/data
+  pleasanter:
+    container_name: pleasanter
+    image: implem/pleasanter:1.4.14.0
+    depends_on:
+      - db
+    ports:
+      - '50001:8080'
+    environment:
+      Implem.Pleasanter_Rds_PostgreSQL_SaConnectionString: Server=db;Database=DB;UID=SAUSER;PWD=SAPASSWORD
+      Implem.Pleasanter_Rds_PostgreSQL_OwnerConnectionString: Server=db;Database=#ServiceName#;UID=#ServiceName#_Owner;PWD=SAPASSWORD
+      Implem.Pleasanter_Rds_PostgreSQL_UserConnectionString: Server=db;Database=#ServiceName#;UID=#ServiceName#_User;PWD=SAPASSWORD
+    volumes:
+      - ./Implem.Pleasanter/App_Data/Parameters/ExtendedScripts:/app/App_Data/Parameters/ExtendedScripts
+      - ./Implem.Pleasanter/App_Data/Parameters/ExtendedStyles:/app/App_Data/Parameters/ExtendedStyles
+  codedefiner:
+    container_name: codedefiner
+    image: implem/pleasanter:codedefiner
+    depends_on:
+      - db
+    environment:
+      Implem.Pleasanter_Rds_PostgreSQL_SaConnectionString: Server=db;Database=DB;UID=SAUSER;PWD=SAPASSWORD
+      Implem.Pleasanter_Rds_PostgreSQL_OwnerConnectionString: Server=db;Database=#ServiceName#;UID=#ServiceName#_Owner;PWD=SAPASSWORD
+      Implem.Pleasanter_Rds_PostgreSQL_UserConnectionString: Server=db;Database=#ServiceName#;UID=#ServiceName#_User;PWD=SAPASSWORD
+
+  ngrok:
+    image: ngrok/ngrok:latest # Use the official ngrok Docker image
+    environment:
+      NGROK_AUTHTOKEN: "X" # Replace with your actual auth token
+      NGROK_DOMAIN: "dynamic-evenly-rat.ngrok-free.app" # Replace with your desired custom domain
+    command: "http pleasanter:8080 --domain=X --inspect=false" # Tunnel HTTP traffic to the 'pleasanter' service on port 8080
+    depends_on:
+      - pleasanter # Ensure ngrok starts after your application
+volumes:
+  pg_data:
+    name: de_pg_data_volume

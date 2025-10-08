@@ -1,0 +1,26 @@
+tbody .drill-button-1711 > div {
+    color: var(--btn-positive-label);
+    background: var(--btn-positive-bg);
+    border: 1px solid var(--btn-positive-border);
+    border-radius: 4px;
+    box-shadow: 0 1px 2px var(--base-shadow);
+    transition: background 150ms ease-out, box-shadow 150ms ease-out;
+    font-size: 13px;
+    font-family: "メイリオ", "Meiryo", "Hiragino Kaku Gothic ProN", "ヒラギノ角ゴ ProN W3", sans-serif;
+    font-weight: bold;
+    cursor: pointer;
+    vertical-align: middle;
+    text-align: center;
+    user-select: none;
+    overflow: visible;
+    padding: 8px 16px 8px 10px !important;
+    width: fit-content;
+}
+
+tbody .drill-button-1711 > div:active {
+  transform: scale(0.95);
+}
+
+.w-100 {
+    width: 100%;
+}
