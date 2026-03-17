@@ -40,12 +40,16 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Implem.Pleasanter.Libraries.Security.Captcha;
 using Implem.Pleasanter.Middlewares;
+using Implem.Pleasanter.MCP.Infrastructure;
 
 namespace Implem.Pleasanter.NetCore
 {
@@ -186,6 +190,7 @@ namespace Implem.Pleasanter.NetCore
             {
                 ConfigureIISIntegration(services);
             }
+            ConfigureMcpServer(services);
             services.Configure<KestrelServerOptions>(options =>
             {
                 options.AllowSynchronousIO = true;
@@ -206,6 +211,27 @@ namespace Implem.Pleasanter.NetCore
             {
                 options.ForwardedHeaders =
                     ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                if (Parameters.Security.ForwardedHeaders?.KnownNetworks is { } knownNetworks)
+                {
+                    foreach (var networkStr in knownNetworks)
+                    {
+                        if (System.Net.IPNetwork.TryParse(networkStr?.Trim(), out var network))
+                        {
+                            options.KnownIPNetworks.Add(network);
+                        }
+                    }
+                }
+
+                if (Parameters.Security.ForwardedHeaders?.KnownProxies is { } knownProxies)
+                {
+                    foreach (var proxyStr in knownProxies)
+                    {
+                        if (System.Net.IPAddress.TryParse(proxyStr?.Trim(), out var proxy))
+                        {
+                            options.KnownProxies.Add(proxy);
+                        }
+                    }
+                }
             });
             services.Configure<HostOptions>(options =>
             {
@@ -288,6 +314,51 @@ namespace Implem.Pleasanter.NetCore
             {
                 LogManager.GetCurrentClassLogger().Debug(ex,
                     "IISServerOptions not available - skipping IIS configuration");
+            }
+            services.AddHttpClient();
+        }
+
+        private static void ConfigureMcpServer(IServiceCollection services)
+        {
+            if (Parameters.McpServer?.Enabled == true)
+            {
+                services.AddMcpServer()
+                    .WithHttpTransport()
+                    .WithToolsFromAssembly()
+                    .WithPromptsFromAssembly()
+                    .WithResourcesFromAssembly()
+                    .WithRequestFilters(requestFilters =>
+                    {
+                        requestFilters.AddListToolsFilter(next => async (context, cancellationToken) =>
+                        {
+                            var result = await next(context, cancellationToken);
+                            if (result?.Tools != null)
+                            {
+                                result.Tools = result.Tools
+                                    .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+                                    .ToList();
+                            }
+                            return result;
+                        });
+                    });
+
+                var rateLimit = Parameters.McpServer.RateLimit;
+
+                if (rateLimit?.AnyEnabled == true)
+                {
+                    services.AddRateLimiter(options =>
+                    {
+                        var limiters = McpRateLimitHelper.CreateRateLimiters(rateLimit);
+
+                        if (limiters.Count > 0)
+                        {
+                            options.GlobalLimiter = PartitionedRateLimiter.CreateChained(limiters.ToArray());
+                        }
+
+                        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                        options.OnRejected = McpRateLimitHelper.CreateOnRejectedHandler(defaultRetryAfterSeconds: 60);
+                    });
+                }
             }
         }
 
@@ -398,6 +469,18 @@ namespace Implem.Pleasanter.NetCore
             }
 
             app.UseCors();
+            if (Parameters.McpServer?.Enabled == true)
+            {
+                var rateLimit = Parameters.McpServer.RateLimit;
+                if (rateLimit?.AnyEnabled == true)
+                {
+                    app.UseWhen(
+                        context => context.Request.Path.StartsWithSegments(McpConstants.BasePath),
+                        appBuilder => appBuilder.UseRateLimiter());
+                }
+
+                app.UseMcpContextMiddleware();
+            }
 
             if (Parameters.OutputCache.OutputCacheControl != null && !Parameters.OutputCache.OutputCacheControl.NoOutputCache)
             {
@@ -548,6 +631,10 @@ namespace Implem.Pleasanter.NetCore
                         Action = "[A-Za-z][A-Za-z0-9_]*"
                     }
                 );
+                if (Parameters.McpServer?.Enabled == true)
+                {
+                    endpoints.MapMcp(McpConstants.BasePath);
+                }
             });
         }
 
@@ -812,4 +899,6 @@ namespace Implem.Pleasanter.NetCore
             }
         }
     }
+
+
 }
