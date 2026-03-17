@@ -48,6 +48,7 @@ using Microsoft.AspNetCore.Mvc.ActionConstraints;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Implem.Pleasanter.Libraries.Security.Captcha;
+using Implem.Pleasanter.Middlewares;
 using Implem.Pleasanter.MCP.Infrastructure;
 
 namespace Implem.Pleasanter.NetCore
@@ -487,6 +488,7 @@ namespace Implem.Pleasanter.NetCore
             }
             app.UseSession();
             app.UseAuthentication();
+            app.UseTrustedProxyAuthentication();
             app.UseAuthorization();
             app.UseSessionMiddleware();
             app.UseEndpoints(endpoints =>
