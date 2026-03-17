@@ -1,92 +1,78 @@
+﻿using Implem.DefinitionAccessor;
 using Implem.Libraries.Utilities;
 using Implem.Pleasanter.Libraries.DataSources;
 using Implem.Pleasanter.Libraries.Requests;
+using Implem.Pleasanter.Libraries.Settings;
 using Implem.Pleasanter.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace Implem.Pleasanter.Middlewares
 {
-    /// <summary>
-    /// Middleware for trusted reverse proxy authentication.
-    /// Reads a configurable HTTP header set by a trusted proxy and automatically
-    /// signs in the matching Pleasanter user via cookie authentication.
-    ///
-    /// The header value is matched against the LoginId column in the Users table.
-    /// If a matching, enabled user is found, a cookie authentication ticket is issued.
-    /// If no match is found, the request continues to the normal login flow.
-    ///
-    /// Configuration (environment variables):
-    ///   TRUSTED_PROXY_AUTH_ENABLED  - Set to any non-empty value to enable this middleware
-    ///   TRUSTED_PROXY_AUTH_HEADER   - HTTP header name containing the authenticated username
-    ///
-    /// Supported reverse proxies (examples):
-    ///   Snowflake SPCS:          Sf-Context-Current-User
-    ///   nginx auth_request:      X-Forwarded-User
-    ///   Entra ID App Proxy:      X-MS-CLIENT-PRINCIPAL-NAME
-    ///   Cloudflare Access:       Cf-Access-Authenticated-User-Email
-    /// </summary>
-    public class TrustedProxyAuthenticationMiddleware
+    public class TrustedProxyAuthenticationMiddleware(RequestDelegate next, ILogger<TrustedProxyAuthenticationMiddleware> logger)
     {
-        private readonly RequestDelegate _next;
-        private readonly string _headerName;
-
-        public TrustedProxyAuthenticationMiddleware(RequestDelegate next)
-        {
-            _next = next;
-            _headerName = Environment.GetEnvironmentVariable("TRUSTED_PROXY_AUTH_HEADER");
-        }
-
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            if (_headerName.IsNullOrEmpty())
+            var header = Strings.CoalesceEmpty(
+                Environment.GetEnvironmentVariable("TRUSTED_PROXY_AUTH_HEADER"),
+                Parameters.Authentication.TrustedProxyParameters?.Header ?? string.Empty);
+            if (string.IsNullOrEmpty(header))
             {
-                await _next(httpContext);
+                if (logger.IsEnabled(LogLevel.Debug)) logger.LogDebug("Trusted proxy authentication skipped: header name is not configured.");
+                await next(httpContext);
                 return;
             }
-
             if (httpContext.User?.Identity?.IsAuthenticated == true)
             {
-                await _next(httpContext);
+                if (logger.IsEnabled(LogLevel.Debug)) logger.LogDebug("Trusted proxy authentication skipped: request is already authenticated.");
+                await next(httpContext);
                 return;
             }
-
-            var proxyUser = httpContext.Request.Headers[_headerName].FirstOrDefault();
+            if (!IsTrustedProxy(httpContext, out var trustReason))
+            {
+                if (logger.IsEnabled(LogLevel.Debug)) logger.LogDebug("Trusted proxy authentication skipped: {Reason}", trustReason);
+                await next(httpContext);
+                return;
+            }
+            if (logger.IsEnabled(LogLevel.Debug)) logger.LogDebug("Trusted proxy source accepted: {Reason}", trustReason);
+            var proxyUser = httpContext.Request.Headers[header].FirstOrDefault();
             if (string.IsNullOrEmpty(proxyUser))
             {
-                await _next(httpContext);
+                if (logger.IsEnabled(LogLevel.Debug)) logger.LogDebug("Trusted proxy authentication skipped: configured header is missing or empty.");
+                await next(httpContext);
                 return;
             }
-
-            try
-            {
-                var context = new Context(
+            var context = new Context(
                     request: false,
                     sessionStatus: false,
                     sessionData: false,
                     user: false,
                     item: false);
-
+            try
+            {
                 var userModel = new UserModel().Get(
                     context: context,
-                    ss: null,
+                    ss: SiteSettingsUtilities.UsersSiteSettings(context),
                     where: Rds.UsersWhere()
-                        .LoginId(proxyUser)
+                        .LoginId(
+                            value: context.Sqls.EscapeValue(proxyUser),
+                            _operator: context.Sqls.LikeWithEscape)
                         .Disabled(false)
                         .Lockout(false));
-
                 if (userModel.AccessStatus == Databases.AccessStatuses.Selected)
                 {
                     var claims = new List<Claim>
                     {
-                        new Claim(ClaimTypes.Name, userModel.LoginId)
+                        new(ClaimTypes.Name, userModel.LoginId)
                     };
                     var identity = new ClaimsIdentity(claims, "TrustedProxy");
                     var principal = new ClaimsPrincipal(identity);
@@ -94,21 +80,122 @@ namespace Implem.Pleasanter.Middlewares
                     {
                         IsPersistent = true
                     };
-
                     await httpContext.SignInAsync(
-                        CookieAuthenticationDefaults.AuthenticationScheme,
-                        principal,
-                        properties);
-
+                        scheme: CookieAuthenticationDefaults.AuthenticationScheme,
+                        principal: principal,
+                        properties: properties);
+                    _ = userModel.AllowAfterUrl(
+                        context: context,
+                        returnUrl: "",
+                        createPersistentCookie: true);
                     httpContext.User = principal;
+                    if (logger.IsEnabled(LogLevel.Debug)) logger.LogDebug("Trusted proxy authentication succeeded.");
+                }
+                else if (logger.IsEnabled(LogLevel.Debug)) logger.LogDebug("Trusted proxy authentication skipped: no active matching user found.");
+            }
+            catch (Exception ex)
+            {
+                _ = new SysLogModel(context, ex);
+                if (logger.IsEnabled(LogLevel.Debug)) logger.LogDebug("Trusted proxy authentication failed with exception type: {ExceptionType}", ex.GetType().Name);
+            }
+            await next(httpContext);
+        }
+
+        private static bool IsTrustedProxy(HttpContext httpContext, out string reason)
+        {
+            var knownNetworks = Parameters.Security.ForwardedHeaders?.KnownNetworks ?? [];
+            var knownProxies = Parameters.Security.ForwardedHeaders?.KnownProxies ?? [];
+            var hasNetworks = knownNetworks.Count > 0;
+            var hasProxies = knownProxies.Count > 0;
+            if (!hasNetworks && !hasProxies)
+            {
+                reason = "KnownNetworks/KnownProxies are empty, validation skipped.";
+                return true;
+            }
+            var remoteIp = ResolveProxyIp(httpContext);
+            if (remoteIp == null)
+            {
+                reason = "Proxy source IP could not be resolved.";
+                return false;
+            }
+            if (hasProxies)
+            {
+                foreach (var proxyStr in knownProxies)
+                {
+                    if (IPAddress.TryParse(proxyStr?.Trim(), out var proxy))
+                    {
+                        var compareProxy = NormalizeIp(proxy);
+                        if (remoteIp.Equals(compareProxy))
+                        {
+                            reason = "Matched KnownProxies.";
+                            return true;
+                        }
+                    }
                 }
             }
-            catch (Exception)
+            if (hasNetworks)
             {
-                // If DB lookup fails, fall through to normal login
+                foreach (var networkStr in knownNetworks)
+                {
+                    if (IPNetwork.TryParse(networkStr?.Trim(), out var network) && network.Contains(remoteIp))
+                    {
+                        reason = "Matched KnownNetworks.";
+                        return true;
+                    }
+                }
             }
+            reason = "Source IP did not match KnownProxies/KnownNetworks.";
+            return false;
+        }
 
-            await _next(httpContext);
+        private static IPAddress ResolveProxyIp(HttpContext httpContext)
+        {
+            var originalFor = httpContext.Request.Headers["X-Original-For"].FirstOrDefault();
+            if (!originalFor.IsNullOrWhiteSpace())
+            {
+                var first = originalFor.Split(',').Select(x => x.Trim()).FirstOrDefault(x => x.Length > 0);
+                if (TryParseIp(first, out var ip))
+                {
+                    return NormalizeIp(ip);
+                }
+            }
+            return NormalizeIp(httpContext.Connection.RemoteIpAddress);
+        }
+
+        private static IPAddress NormalizeIp(IPAddress ip)
+        {
+            if (ip == null)
+            {
+                return null;
+            }
+            return ip.IsIPv4MappedToIPv6 ? ip.MapToIPv4() : ip;
+        }
+
+        private static bool TryParseIp(string value, out IPAddress ip)
+        {
+            ip = null;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+            var token = value.Trim().Trim('"');
+            var start = token.IndexOf('[');
+            var end = token.IndexOf(']');
+            if (start >= 0 && end > start)
+            {
+                token = token.Substring(start + 1, end - start - 1);
+                return IPAddress.TryParse(token, out ip);
+            }
+            var colon = token.LastIndexOf(':');
+            if (colon > 0 && token.IndexOf(':') == colon)
+            {
+                var hostPart = token[..colon];
+                if (IPAddress.TryParse(hostPart, out ip))
+                {
+                    return true;
+                }
+            }
+            return IPAddress.TryParse(token, out ip);
         }
     }
 
@@ -117,7 +204,13 @@ namespace Implem.Pleasanter.Middlewares
         public static IApplicationBuilder UseTrustedProxyAuthentication(
             this IApplicationBuilder app)
         {
-            return app.UseMiddleware<TrustedProxyAuthenticationMiddleware>();
+            var enabled = !Environment.GetEnvironmentVariable("TRUSTED_PROXY_AUTH_ENABLED").IsNullOrWhiteSpace()
+                || (Parameters.Authentication.TrustedProxyParameters?.Enabled ?? false);
+            if (enabled)
+            {
+                return app.UseMiddleware<TrustedProxyAuthenticationMiddleware>();
+            }
+            return app;
         }
     }
 }

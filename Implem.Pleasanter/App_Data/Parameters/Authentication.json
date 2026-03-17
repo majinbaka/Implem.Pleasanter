@@ -91,5 +91,9 @@
                 }
             }
         ]
+    },
+    "TrustedProxyParameters": {
+        "Enabled": false,
+        "Header": ""
     }
 }

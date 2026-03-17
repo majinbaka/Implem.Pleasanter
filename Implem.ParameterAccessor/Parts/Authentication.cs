@@ -11,5 +11,6 @@ namespace Implem.ParameterAccessor.Parts
         public Passkey PasskeyParameters;
         public List<Ldap> LdapParameters;
         public Saml SamlParameters;
+        public TrustedProxy TrustedProxyParameters;
     }
 }

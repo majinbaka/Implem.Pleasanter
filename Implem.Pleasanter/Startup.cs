@@ -488,10 +488,7 @@ namespace Implem.Pleasanter.NetCore
             }
             app.UseSession();
             app.UseAuthentication();
-            if (!Environment.GetEnvironmentVariable("TRUSTED_PROXY_AUTH_ENABLED").IsNullOrEmpty())
-            {
-                app.UseTrustedProxyAuthentication();
-            }
+            app.UseTrustedProxyAuthentication();
             app.UseAuthorization();
             app.UseSessionMiddleware();
             app.UseEndpoints(endpoints =>
