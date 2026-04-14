@@ -773,9 +773,12 @@ namespace Implem.Pleasanter.Libraries.Settings
                                     controlId: controlId);
                                 break;
                             case "CalendarDate":
-                                CalendarDate = Time(
+                                var rawCalendarDate = Time(
                                     context: context,
                                     controlId: controlId);
+                                CalendarDate = rawCalendarDate.HasValue
+                                    ? rawCalendarDate.Value.ToUniversal(context: context)
+                                    : null;
                                 break;
                             case "CalendarStart":
                                 CalendarStart = Time(
@@ -980,7 +983,10 @@ namespace Implem.Pleasanter.Libraries.Settings
                         CalendarGroupBy = dashboardPart.CalendarGroupBy;
                         if (context.Forms.Keys.Contains($"CalendarDate{CalendarSuffix}"))
                         {
-                            AddCalendarDateHash(value: context.Forms.DateTime($"CalendarDate{CalendarSuffix}"), key: $"CalendarDate{CalendarSuffix}");
+                            var calendarDate = context.Forms.DateTime(context: context, key: $"CalendarDate{CalendarSuffix}");
+                            AddCalendarDateHash(
+                                value: calendarDate.InRange() ? calendarDate.ToUniversal(context: context) : null,
+                                key: $"CalendarDate{CalendarSuffix}");
                         }
                         if (context.Forms.Keys.Contains($"CalendarStart{CalendarSuffix}"))
                         {

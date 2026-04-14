@@ -69,6 +69,11 @@ namespace Implem.Pleasanter.MCP.Utilities
                 ? referenceId
                 : siteId;
 
+            if (siteId > 0)
+            {
+                context.Page = "items/" + siteId;
+            }
+
             context.Controller = McpExecutionScope.CurrentMcpClass;
             context.Action = McpExecutionScope.CurrentMcpMethod;
 

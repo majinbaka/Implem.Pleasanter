@@ -15,6 +15,7 @@ namespace Implem.Pleasanter.MCP.Translator
         private const string DeptsPattern = "[[Depts";
         private const string GroupsPattern = "[[Groups";
         private const string UsersPattern = "[[Users";
+        private const string AttachmentsHashColumnName = "AttachmentsHash";
 
         private readonly ColumnNameConverter columnConverter;
         private readonly Context context;
@@ -186,6 +187,10 @@ namespace Implem.Pleasanter.MCP.Translator
             if (value == null)
             {
                 return null;
+            }
+            if (GetHashName(columnName: columnName) == AttachmentsHashColumnName)
+            {
+                return value;
             }
             switch (value)
             {

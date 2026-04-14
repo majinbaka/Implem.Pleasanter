@@ -4272,21 +4272,35 @@ namespace Implem.Pleasanter.Models
             {
                 return Deny(context: context);
             }
-            if (isAuthenticationByPasskey || Authenticate(context: context))
+            if (!isAuthenticationByPasskey && !Authenticate(context: context))
             {
-                if (LoginExpired())
+                var tenantOptions = TenantOptions(context: context);
+                if (tenantOptions?.Count > 0)
                 {
-                    return DenyLoginExpired(context: context);
+                    return TenantsDropDown(
+                        context: context,
+                        tenantOptions: tenantOptions);
                 }
-                if (!AllowedIpAddress(context))
+                else
                 {
-                    return InvalidIpAddress(context: context);
+                    return Deny(context: context);
                 }
-                else if (Lockout)
-                {
-                    return UserLockout(context: context);
-                }
-                else if (EnabledSecondaryAuthentication(context: context))
+            }
+            if (LoginExpired())
+            {
+                return DenyLoginExpired(context: context);
+            }
+            if (!AllowedIpAddress(context))
+            {
+                return InvalidIpAddress(context: context);
+            }
+            if (Lockout)
+            {
+                return UserLockout(context: context);
+            }
+            if (!isAuthenticationByPasskey)
+            {
+                if (EnabledSecondaryAuthentication(context: context))
                 {
                     var secondaryAuthenticationCode = context
                         .Forms
@@ -4314,33 +4328,16 @@ namespace Implem.Pleasanter.Models
                                 isAuthenticationByMail: isAuthenticationByMail,
                                 noHttpContext: noHttpContext);
                 }
-                else if (PasswordExpired())
+                if (PasswordExpired())
                 {
                     return OpenChangePasswordAtLoginDialog(context: context);
                 }
-                else
-                {
-                    return Allow(
-                        context: context,
-                        returnUrl: returnUrl,
-                        createPersistentCookie: context.Forms.Bool("Users_RememberMe"),
-                        noHttpContext: noHttpContext);
-                }
             }
-            else
-            {
-                var tenantOptions = TenantOptions(context: context);
-                if (tenantOptions?.Any() == true)
-                {
-                    return TenantsDropDown(
-                        context: context,
-                        tenantOptions: tenantOptions);
-                }
-                else
-                {
-                    return Deny(context: context);
-                }
-            }
+            return Allow(
+                context: context,
+                returnUrl: returnUrl,
+                createPersistentCookie: context.Forms.Bool("Users_RememberMe"),
+                noHttpContext: noHttpContext);
         }
 
         /// <summary>

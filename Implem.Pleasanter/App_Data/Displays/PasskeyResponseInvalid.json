@@ -1,6 +1,6 @@
 ﻿{
     "Id": "PasskeyResponseInvalid",
-    "Type": 110,
+    "Type": 240,
     "ClientScript": true,
     "Languages": [
         { "Body": "The passkey response received is invalid or incomplete. Please refresh the page and try again." },

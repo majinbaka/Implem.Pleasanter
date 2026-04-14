@@ -1,5 +1,12 @@
-﻿using Implem.Pleasanter.Libraries.General;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Threading.Tasks;
+using Implem.Libraries.Utilities;
+using Implem.Pleasanter.Libraries.General;
 using Implem.Pleasanter.Libraries.Requests;
+using Implem.Pleasanter.Libraries.Security;
 using Implem.Pleasanter.Libraries.Settings;
 using Implem.Pleasanter.MCP.McpContext;
 using Implem.Pleasanter.MCP.Models;
@@ -9,11 +16,6 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Threading.Tasks;
 using static Implem.Pleasanter.MCP.Utilities.CommonUtilities;
 
 namespace Implem.Pleasanter.MCP.Tools
@@ -420,7 +422,8 @@ viewId=0 で全ビュー削除。実行前に必ずユーザーに確認して�
 
         private static JObject ConvertSiteSettingsToJObject(SiteSettings ss)
         {
-            if (ss == null)
+            if (ss == null ||
+                ss.AccessStatus == Databases.AccessStatuses.NotFound)
             {
                 return null;
             }
@@ -540,6 +543,13 @@ viewId=0 で全ビュー削除。実行前に必ずユーザーに確認して�
                     return CallToolResultUtilities.ToError(
                         context: context,
                         type: Error.Types.NotFound);
+                }
+
+                if (!context.HasPermission(ss))
+                {
+                    return CallToolResultUtilities.ToError(
+                        context: context,
+                        type: Error.Types.HasNotPermission);
                 }
 
                 var viewLatestId = ss?.ViewLatestId ?? 1;

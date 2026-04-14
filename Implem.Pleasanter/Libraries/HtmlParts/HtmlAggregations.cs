@@ -282,7 +282,9 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
             }
             else
             {
-                return selectedValue;
+                return StringEmpty(groupBy, selectedValue)
+                    ? Displays.NotSet(context: context)
+                    : selectedValue;
             }
         }
 

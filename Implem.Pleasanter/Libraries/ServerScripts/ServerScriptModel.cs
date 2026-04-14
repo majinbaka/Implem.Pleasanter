@@ -326,7 +326,7 @@ namespace Implem.Pleasanter.Libraries.ServerScripts
 
             public bool? GetHide()
             {
-                return _hide
+                return _hideChanged
                     ? (bool?)Hide
                     : null;
             }

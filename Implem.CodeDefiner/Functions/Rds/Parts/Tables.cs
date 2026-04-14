@@ -201,7 +201,11 @@ namespace Implem.CodeDefiner.Functions.Rds.Parts
         internal static bool IsQuartzTable(string tableName)
         {
             var prefix = Parameters.Quartz?.Clustering?.TablePrefix;
-            return tableName != null && prefix != null && tableName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            return tableName != null
+                && prefix != null
+                && tableName.StartsWith(
+                    prefix,
+                    StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -31,14 +31,21 @@ class MarkdownFieldElement extends HTMLElement {
     private filesBtnElem: HTMLInputElement | null = null;
     private photoBtnElem: HTMLButtonElement | null = null;
     private viewerType: ViewerType = 'auto';
+    private static readonly PLACEHOLDER_BASE = 'http://ph.invalid/';
+    private static readonly PLACEHOLDER_BASE_ESCAPED = MarkdownFieldElement.PLACEHOLDER_BASE.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&'
+    );
+    private static readonly PLACEHOLDER_REGEX = new RegExp(
+        `<a\\s+href="${MarkdownFieldElement.PLACEHOLDER_BASE_ESCAPED}(\\d+)/"([^>]*)>([\\s\\S]*?)</a>`,
+        'gi'
+    );
+    private customSchemeLinks: Array<{ url: string; displayText?: string }> = [];
     private uncPathRegex: RegExp =
         /\B\\\\[^\\/:*?"<>|\r\n\s]+\\[^\\/:*?"<>|\r\n\s]+(?:\\[^\\/:*?"<>|\r\n()\s]*(?:\([^\\/:*?"<>|\r\n()]*\)[^\\/:*?"<>|\r\n()\s]*)?)*[^\\/:*?"<>|\r\n()[\]\s]/gi;
-    private encodedUncPathRegex: RegExp =
-        /(?<!data-href=")%5C%5C(?:[A-Za-z0-9_.!'()-]|%(?:[0-9A-Fa-f]{2}))+(?:%5C(?:[A-Za-z0-9_.!'()-]|%(?:[0-9A-Fa-f]{2}))+)+/gi;
     private mdLinkCustomSchemeRegex: RegExp =
-        /(\[(?:[^\\\]]|\\.)*\]\()((?:\\\\|notes:\/\/)[^)]*?)(\s+(?:"[^"]*"|'[^']*'))?(\))/gi;
+        /(\[(?:[^\\[\]]|\\.|![^\]]*\]\([^)]*\))*\]\()((?:\\\\|notes:\/\/)[^()\s]*(?:\([^()]*\)[^()\s]*)*)(\s+(?:"[^"]*"|'[^']*'))?(\))/gi;
     private notesLinkRegex: RegExp = /\bnotes:\/\/[^\s<()>[\]"]+/gi;
-    private encodedNotesLinkRegex: RegExp = /notes%3A%2F%2F[\w%\-.!~*'()%]+/gi;
 
     constructor() {
         super();
@@ -197,7 +204,7 @@ class MarkdownFieldElement extends HTMLElement {
                 }
                 return `<del>${this.escapeHtml(token.text)}</del>`;
             case 'codespan':
-                return `<code>${this.escapeHtml(token.text)}</code>`;
+                return `<code>${this.escapeHtml(this.restorePlaceholdersInText(token.text))}</code>`;
             case 'text':
                 return this.escapeHtml(token.text);
             case 'escape':
@@ -215,18 +222,9 @@ class MarkdownFieldElement extends HTMLElement {
     };
 
     private mdRenderLink = (token: Tokens.Link) => {
-        const blank = MarkdownFieldElement.AnchorTargetBlank ? ' target="_blank"' : '';
         const title = token.title ? ` title="${this.escapeHtml(token.title)}"` : '';
         const linkText = this.renderLinkText(token);
-        this.encodedUncPathRegex.lastIndex = 0;
-        this.encodedNotesLinkRegex.lastIndex = 0;
-        if (this.encodedUncPathRegex.test(token.href)) {
-            return `<a data-href="file://${this.escapeHtml(decodeURIComponent(token.href))}"${blank}${title}>${linkText}</a>`;
-        } else if (this.encodedNotesLinkRegex.test(token.href)) {
-            return `<a data-href="${this.escapeHtml(decodeURIComponent(token.href))}"${blank}${title}>${linkText}</a>`;
-        } else {
-            return `<a href="${this.escapeHtml(token.href)}"${blank}${title}>${linkText}</a>`;
-        }
+        return `<a href="${this.escapeHtml(token.href)}"${title}>${linkText}</a>`;
     };
 
     private mdRenderImage = (token: Tokens.Image) => {
@@ -239,16 +237,17 @@ class MarkdownFieldElement extends HTMLElement {
 
     private mdRenderCode = (token: Tokens.Code) => {
         const lang = (token.lang || '').trim();
+        const text = this.restorePlaceholdersInText(token.text);
         let highlighted: string;
         if (lang && hljs.getLanguage(lang)) {
-            highlighted = hljs.highlight(token.text, { language: lang }).value;
+            highlighted = hljs.highlight(text, { language: lang }).value;
         } else {
-            highlighted = hljs.highlightAuto(token.text).value;
+            highlighted = hljs.highlightAuto(text).value;
         }
         return `<div class="md-code-block">
                     <button class="md-code-copy">
                         <span class="md-btn-icon material-symbols-outlined">content_copy</span>
-                        <pre class="md-code-copy-item" name="copy_data">${this.escapeHtml(token.text)}</pre>
+                        <pre class="md-code-copy-item" name="copy_data">${this.escapeHtml(text)}</pre>
                     </button>
                     <div class="md-code-copied">Copied!</div>
                     <pre><code class="hljs ${lang ? `language-${lang}` : ''}">${highlighted}</code></pre>
@@ -289,6 +288,16 @@ class MarkdownFieldElement extends HTMLElement {
             .replace(/'/g, '&apos;');
     }
 
+    private restorePlaceholdersInText(text: string): string {
+        return text.replace(
+            new RegExp(`${MarkdownFieldElement.PLACEHOLDER_BASE_ESCAPED}(\\d+)/`, 'g'),
+            (match, indexStr) => {
+                const entry = this.customSchemeLinks[parseInt(indexStr, 10)];
+                return entry !== undefined ? entry.url : match;
+            }
+        );
+    }
+
     private escapeMarkdown(str: string): string {
         return str
             .replace(/&/g, '&amp;')
@@ -301,8 +310,8 @@ class MarkdownFieldElement extends HTMLElement {
             .replace(/- /g, '-&nbsp;')
             .replace(/\+ /g, '+&nbsp;')
             .replace(/\* /g, '&#42;&nbsp;')
-            .replace(/\[ \]/g, '&#91;&nbsp;&#93;')
-            .replace(/\[x\]/gi, '&#91;x&#93;')
+            .replace(/\[ \](?!\()/g, '&#91;&nbsp;&#93;')
+            .replace(/\[x\](?!\()/gi, '&#91;x&#93;')
             .replace(/\d+\. /g, m => m.replace(/\. /, '&#46;&nbsp;'))
             .replace(/\\/g, '\\\\')
             .replace(/`/g, '&#96;')
@@ -310,65 +319,86 @@ class MarkdownFieldElement extends HTMLElement {
             .replace(/---/g, '&#45;&#45;&#45;');
     }
 
-    private decodeHtmlEntities(input: string) {
-        return input
-            .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)))
-            .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-            .replace(/&apos;/g, "'");
-    }
-
-    private encodeCustomSchemeLink(md: string) {
+    private replaceWithPlaceholders(md: string): string {
+        this.customSchemeLinks = [];
+        const codeBlocks: string[] = [];
+        const protectCode = (match: string): string => {
+            const idx = codeBlocks.length;
+            codeBlocks.push(match);
+            return `\uE000CODE${idx}\uE000`;
+        };
+        // インラインコード（複数バックティック・単体バックティック）を保護
+        // URL 正規表現がバッククオートを消費してコードスパン構文を壊すのを防ぐ
+        // フェンス・インデントコードブロックは mdRenderCode 内の restorePlaceholdersInText で復元する
+        md = md.replace(/(`{2,})(?:(?!\n\n)[\s\S])+?\1|`[^`\n]+`/g, protectCode);
+        const storePath = (url: string, displayText?: string): string => {
+            const index = this.customSchemeLinks.length;
+            this.customSchemeLinks.push({ url, displayText });
+            return `${MarkdownFieldElement.PLACEHOLDER_BASE}${index}/`;
+        };
         this.mdLinkCustomSchemeRegex.lastIndex = 0;
         md = md.replace(this.mdLinkCustomSchemeRegex, (_, prefix, url, title, suffix) => {
-            return `${prefix}${encodeURIComponent(url)}${title || ''}${suffix}`;
+            const linkText = prefix.slice(1, -2);
+            return `${prefix}${storePath(url, linkText)}${title || ''}${suffix}`;
         });
         this.uncPathRegex.lastIndex = 0;
-        md = md.replace(this.uncPathRegex, url => {
-            return `${encodeURIComponent(url)}`;
-        });
+        md = md.replace(this.uncPathRegex, url => storePath(url));
         this.notesLinkRegex.lastIndex = 0;
-        md = md.replace(this.notesLinkRegex, url => {
-            return `${encodeURIComponent(url)}`;
+        md = md.replace(this.notesLinkRegex, url => storePath(url));
+        md = md.replace(/\uE000CODE(\d+)\uE000/g, (match, i) => {
+            const idx = parseInt(i, 10);
+            return idx < codeBlocks.length ? codeBlocks[idx] : match;
         });
         return md;
     }
 
-    private createCustomSchemeLink(md: string) {
-        md = this.decodeHtmlEntities(md);
-        this.encodedUncPathRegex.lastIndex = 0;
-        md = md.replace(this.encodedUncPathRegex, url => {
-            return this.mdRenderLink({
-                href: url,
-                text: url
-            } as Tokens.Link);
+    private restoreFromPlaceholders(html: string): string {
+        MarkdownFieldElement.PLACEHOLDER_REGEX.lastIndex = 0;
+        html = html.replace(MarkdownFieldElement.PLACEHOLDER_REGEX, (_, indexStr, attrs, linkText) => {
+            const index = parseInt(indexStr, 10);
+            const entry = this.customSchemeLinks[index];
+            // entry が見つからない場合はリンクテキストのみを返し、プレースホルダー URL 露出を防ぐ
+            if (entry === undefined) return linkText;
+            const isUnc = entry.url.startsWith('\\\\');
+            const href = isUnc ? `file://${entry.url}` : entry.url;
+            // linkText がプレースホルダー URL のまま残っている場合は、平文 UNC/notes URL が
+            // GFM autolink 化されたケース。entry.displayText（[text](\\url) 形式で
+            // 保存した元テキスト）があればそれを、なければ元 URL を表示する。
+            // それ以外は marked が正しくレンダリング済みの HTML をそのまま使用する。
+            const displayText = linkText.includes(MarkdownFieldElement.PLACEHOLDER_BASE)
+                ? this.escapeHtml(entry.displayText ?? entry.url)
+                : linkText;
+            return `<a href="${this.escapeHtml(href)}"${attrs}>${displayText}</a>`;
         });
-        this.encodedNotesLinkRegex.lastIndex = 0;
-        md = md.replace(this.encodedNotesLinkRegex, url => {
-            return this.mdRenderLink({
-                href: url,
-                text: url
-            } as Tokens.Link);
-        });
-        return md;
+        // HTML 内に残ったプレースホルダー URL を元の URL に復元する
+        html = html.replace(
+            new RegExp(`${MarkdownFieldElement.PLACEHOLDER_BASE_ESCAPED}(\\d+)/`, 'g'),
+            (match, indexStr) => {
+                const entry = this.customSchemeLinks[parseInt(indexStr, 10)];
+                return entry !== undefined ? this.escapeHtml(entry.url) : match;
+            }
+        );
+        return html;
     }
 
     private finalizeViewerDom() {
-        this.viewerElem!.querySelectorAll('a[data-href]').forEach(a => {
-            const element = a as HTMLAnchorElement;
-            element.href = element.dataset.href!;
-            element.removeAttribute('data-href');
-        });
-
         this.viewerElem!.querySelectorAll('pre code a').forEach(a => {
             const textNode = document.createTextNode(a.textContent || '');
             a.replaceWith(textNode);
         });
+        if (MarkdownFieldElement.AnchorTargetBlank) {
+            this.viewerElem!.querySelectorAll('a').forEach(a => {
+                const anchor = a as HTMLAnchorElement;
+                anchor.target = '_blank';
+                anchor.rel = 'noopener noreferrer';
+            });
+        }
     }
 
     public showViewer() {
         if (this.controller.value || this.isReadonly || this.isComment) {
             let md = this.controller.value;
-            md = this.encodeCustomSchemeLink(md);
+            md = this.replaceWithPlaceholders(md);
             if (md.indexOf('[md]') === 0) {
                 md = md.slice(4);
                 md = String(this.viewerMarked!.parse(md));
@@ -377,10 +407,10 @@ class MarkdownFieldElement extends HTMLElement {
                 md = tokens!.map(token => this.notesRender(token)).join('');
                 md = `<div class="notes">${md}<br></div>`;
             }
-            md = this.createCustomSchemeLink(md);
             md = DOMPurify.sanitize(md, {
-                ADD_ATTR: ['target', 'title', 'data-href']
+                ADD_ATTR: ['title']
             });
+            md = this.restoreFromPlaceholders(md);
             md = md.replace(/&amp;#(\d+);/g, '&#$1;');
             this.viewerElem!.innerHTML = md;
             this.finalizeViewerDom();

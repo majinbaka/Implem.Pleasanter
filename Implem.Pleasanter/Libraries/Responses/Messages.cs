@@ -1534,6 +1534,66 @@ namespace Implem.Pleasanter.Libraries.Responses
                 css: "alert-error");
         }
 
+        public static Message PasskeyNotAvailable(Context context, params string[] data)
+        {
+            return Get(
+                id: "PasskeyNotAvailable",
+                text: Displays.PasskeyNotAvailable(
+                    context: context,
+                    data: data),
+                css: "alert-error");
+        }
+
+        public static Message PasskeyOperationAborted(Context context, params string[] data)
+        {
+            return Get(
+                id: "PasskeyOperationAborted",
+                text: Displays.PasskeyOperationAborted(
+                    context: context,
+                    data: data),
+                css: "alert-error");
+        }
+
+        public static Message PasskeyOperationTimeout(Context context, params string[] data)
+        {
+            return Get(
+                id: "PasskeyOperationTimeout",
+                text: Displays.PasskeyOperationTimeout(
+                    context: context,
+                    data: data),
+                css: "alert-error");
+        }
+
+        public static Message PasskeyOperationTimeoutOrAbort(Context context, params string[] data)
+        {
+            return Get(
+                id: "PasskeyOperationTimeoutOrAbort",
+                text: Displays.PasskeyOperationTimeoutOrAbort(
+                    context: context,
+                    data: data),
+                css: "alert-error");
+        }
+
+        public static Message PasskeyResponseInvalid(Context context, params string[] data)
+        {
+            return Get(
+                id: "PasskeyResponseInvalid",
+                text: Displays.PasskeyResponseInvalid(
+                    context: context,
+                    data: data),
+                css: "alert-error");
+        }
+
+        public static Message PasskeyServerUnavailable(Context context, params string[] data)
+        {
+            return Get(
+                id: "PasskeyServerUnavailable",
+                text: Displays.PasskeyServerUnavailable(
+                    context: context,
+                    data: data),
+                css: "alert-error");
+        }
+
         public static Message PasswordHasBeenUsed(Context context, params string[] data)
         {
             return Get(
@@ -3709,6 +3769,72 @@ namespace Implem.Pleasanter.Libraries.Responses
             return ResponseMessage(
                 context: context,
                 message: ParameterSyntaxError(
+                    context: context,
+                    data: data),
+                target: target);
+        }
+
+        public static ResponseCollection ResponsePasskeyNotAvailable(
+            Context context, string target = null, params string[] data)
+        {
+            return ResponseMessage(
+                context: context,
+                message: PasskeyNotAvailable(
+                    context: context,
+                    data: data),
+                target: target);
+        }
+
+        public static ResponseCollection ResponsePasskeyOperationAborted(
+            Context context, string target = null, params string[] data)
+        {
+            return ResponseMessage(
+                context: context,
+                message: PasskeyOperationAborted(
+                    context: context,
+                    data: data),
+                target: target);
+        }
+
+        public static ResponseCollection ResponsePasskeyOperationTimeout(
+            Context context, string target = null, params string[] data)
+        {
+            return ResponseMessage(
+                context: context,
+                message: PasskeyOperationTimeout(
+                    context: context,
+                    data: data),
+                target: target);
+        }
+
+        public static ResponseCollection ResponsePasskeyOperationTimeoutOrAbort(
+            Context context, string target = null, params string[] data)
+        {
+            return ResponseMessage(
+                context: context,
+                message: PasskeyOperationTimeoutOrAbort(
+                    context: context,
+                    data: data),
+                target: target);
+        }
+
+        public static ResponseCollection ResponsePasskeyResponseInvalid(
+            Context context, string target = null, params string[] data)
+        {
+            return ResponseMessage(
+                context: context,
+                message: PasskeyResponseInvalid(
+                    context: context,
+                    data: data),
+                target: target);
+        }
+
+        public static ResponseCollection ResponsePasskeyServerUnavailable(
+            Context context, string target = null, params string[] data)
+        {
+            return ResponseMessage(
+                context: context,
+                message: PasskeyServerUnavailable(
                     context: context,
                     data: data),
                 target: target);

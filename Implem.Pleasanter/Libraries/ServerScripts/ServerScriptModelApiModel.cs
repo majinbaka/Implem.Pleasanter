@@ -423,11 +423,13 @@ namespace Implem.Pleasanter.Libraries.ServerScripts
             return true;
         }
 
-        private static DateTime Date(object value)
+        private DateTime Date(object value)
         {
-            return value is DateTime dateTime
-                ? TimeZoneInfo.ConvertTimeFromUtc(dateTime, TimeZoneInfo.Local)
-                : Types.ToDateTime(0);
+            if (value is DateTime dateTime)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(dateTime, TimeZoneInfo.Local);
+            }
+            return value.ToDateTime().ToUniversal(context: Context);
         }
 
         public string ToJsonString(Context context, SiteSettings ss)

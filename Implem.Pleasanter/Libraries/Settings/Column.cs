@@ -1110,9 +1110,10 @@ namespace Implem.Pleasanter.Libraries.Settings
 
         public string ResponseValOptions(ServerScriptModelColumn serverScriptModelColumn)
         {
+            var hide = serverScriptModelColumn?.GetHide();
             return new
             {
-                Hide = Hide == true || serverScriptModelColumn?.Hide == true
+                Hide = hide ?? (Hide == true)
             }.ToJson();
         }
 

@@ -4,18 +4,7 @@ using System.Collections.Generic;
 using Implem.Libraries.Utilities;
 using Implem.Pleasanter.Libraries.Requests;
 using System.Linq;
-using Microsoft.Extensions.FileSystemGlobbing.Internal;
-using System.Text.RegularExpressions;
-using Implem.Pleasanter.Libraries.DataTypes;
-using Implem.DefinitionAccessor;
-using static Npgsql.Replication.PgOutput.Messages.RelationMessage;
-using System.Web.Razor.Generator;
-using System.Collections;
-using System.Net.Security;
-using NLog.Targets;
-using Implem.Pleasanter.Libraries.Responses;
 using Implem.Pleasanter.Libraries.Server;
-using Implem.ParameterAccessor.Parts;
 
 namespace Implem.Pleasanter.Models.ApiSiteSettings
 {
@@ -53,11 +42,13 @@ namespace Implem.Pleasanter.Models.ApiSiteSettings
                 .Where(kvp => kvp.Key != "General")
                 .SelectMany(kvp => kvp.Value)
                 .ToList();
+            var otherEditorColumnNames = otherEditorColumns.ToHashSet();
             SetColumnsParams(
                 context: context,
                 ss: ss,
                 smartDesignParamHash: smartDesignParamHash,
-                editorColumnList: editorColumnList);
+                editorColumnList: editorColumnList,
+                otherEditorColumnNames: otherEditorColumnNames);
             if (ss.Destinations != null && ss.Destinations.Count() > 0)
             {
                 SetDestinationLink(
@@ -81,7 +72,8 @@ namespace Implem.Pleasanter.Models.ApiSiteSettings
             Context context,
             SiteSettings ss,
             Dictionary<string, DragParamsApiSettingModel> smartDesignParamHash,
-            List<string> editorColumnList)
+            List<string> editorColumnList,
+            HashSet<string> otherEditorColumnNames)
         {
             var notInEditorColumnList = ss.GetEditorColumnNames()
                 .Where(o => !editorColumnList.Contains(o))
@@ -102,7 +94,8 @@ namespace Implem.Pleasanter.Models.ApiSiteSettings
                     editorColumnList: editorColumnList,
                     notInEditorColumnList: notInEditorColumnList,
                     dragParamsApiSettingModel: dragParamsApiSettingModel,
-                    editorDefinitionColumnNames: editorDefinitionColumnNames);
+                    editorDefinitionColumnNames: editorDefinitionColumnNames,
+                    otherEditorColumnNames: otherEditorColumnNames);
                 smartDesignParamHash.Add(column.ColumnName, dragParamsApiSettingModel);
             });
             var linksColumn = ss.GridColumns
@@ -146,7 +139,8 @@ namespace Implem.Pleasanter.Models.ApiSiteSettings
             List<string> editorColumnList,
             List<string> notInEditorColumnList,
             DragParamsApiSettingModel dragParamsApiSettingModel,
-            HashSet<string> editorDefinitionColumnNames)
+            HashSet<string> editorDefinitionColumnNames,
+            HashSet<string> otherEditorColumnNames)
         {
             if (editorColumnList.Contains(column.ColumnName) || !notInEditorColumnList.Contains(column.ColumnName))
             {
@@ -166,9 +160,25 @@ namespace Implem.Pleasanter.Models.ApiSiteSettings
             }
             else
             {
-                dragParamsApiSettingModel.State.Grid = -1;
-                dragParamsApiSettingModel.State.Edit = -1;
-                dragParamsApiSettingModel.State.Filter = -1;
+                if (otherEditorColumnNames.Contains(column.ColumnName))
+                {
+                    var canEdit = editorDefinitionColumnNames.Contains(column.ColumnName);
+                    dragParamsApiSettingModel.State.Grid = GetStateValue(
+                        column.GridColumn,
+                        ss.GridColumns,
+                        column.ColumnName);
+                    dragParamsApiSettingModel.State.Edit = canEdit ? 1 : -1;
+                    dragParamsApiSettingModel.State.Filter = GetStateValue(
+                        column.FilterColumn,
+                        ss.FilterColumns,
+                        column.ColumnName);
+                }
+                else
+                {
+                    dragParamsApiSettingModel.State.Grid = -1;
+                    dragParamsApiSettingModel.State.Edit = -1;
+                    dragParamsApiSettingModel.State.Filter = -1;
+                }
             }
             return dragParamsApiSettingModel;
         }
@@ -197,26 +207,43 @@ namespace Implem.Pleasanter.Models.ApiSiteSettings
         {
             if (ss.EditorColumnHash != null)
             {
-                var generalColumns = ss.EditorColumnHash["General"];
-                var removeLinksColumnList = generalColumns
-                    .Where(column => column.StartsWith("_Links-"))
-                    .Select(column => new { Column = column, Id = long.Parse(column.Substring("_Links-".Length)) })
-                    .Where(x => !ss.Destinations.ContainsKey(x.Id) && !ss.Sources.ContainsKey(x.Id))
-                    .Select(x => x.Column)
-                    .ToList();
-                foreach (var key in removeLinksColumnList)
+                foreach (var kvp in ss.EditorColumnHash)
                 {
-                    generalColumns.Remove(key);
+                    var columns = kvp.Value;
+                    var removeLinksColumnList = columns
+                        .Where(column => column.StartsWith("_Links-"))
+                        .Select(column => new
+                        {
+                            Column = column,
+                            Id = long.Parse(column.Substring("_Links-".Length))
+                        })
+                        .Where(x => !ss.Destinations.ContainsKey(x.Id)
+                            && !ss.Sources.ContainsKey(x.Id))
+                        .Select(x => x.Column)
+                        .ToList();
+                    foreach (var key in removeLinksColumnList)
+                    {
+                        columns.Remove(key);
+                    }
                 }
-                ss.EditorColumnHash["General"] = generalColumns;
                 SiteSettings.EditorColumnHash = ss.EditorColumnHash;
             }
             if (ss.GridColumns != null) SiteSettings.GridColumns = ss.GridColumns;
             if (ss.FilterColumns != null) SiteSettings.FilterColumns = ss.FilterColumns;
             if (ss.Links != null) SiteSettings.Links = ss.Links;
             if (ss.SectionLatestId != null) SiteSettings.SectionLatestId = ss.SectionLatestId;
+            if (ss.GeneralTabLabelText != null) SiteSettings.GeneralTabLabelText = ss.GeneralTabLabelText;
+            if (ss.TabLatestId != null) SiteSettings.TabLatestId = ss.TabLatestId;
+            if (ss.Tabs != null) SiteSettings.Tabs = ss.Tabs;
             SiteSettings.Sections = ss.Sections != null ? ss.Sections : new List<Section>();
-            if (ss.Columns != null) SiteSettings.Columns = ss.Columns.Where(o => editorColumnList.Contains(o.ColumnName) || DefaultColumns.Contains(o.ColumnName)).ToList();
+            if (ss.Columns != null)
+            {
+                var enabledEditorColumns = ss.GetEditorColumnNames();
+                SiteSettings.Columns = ss.Columns
+                    .Where(o => enabledEditorColumns.Contains(o.ColumnName)
+                        || DefaultColumns.Contains(o.ColumnName))
+                    .ToList();
+            }
         }
 
         public Dictionary<string, DragParamsApiSettingModel> SetDestinationLink(
@@ -239,7 +266,7 @@ namespace Implem.Pleasanter.Models.ApiSiteSettings
                 }
                 else if (otherEditorColumns.Any(column => column.StartsWith("_Links-") && long.Parse(column.Substring("_Links-".Length)) == ss.LinkId(linkColumn)))
                 {
-                    dragParamsApiSettingModel.State.Edit = -1;
+                    dragParamsApiSettingModel.State.Edit = 1;
                 }
                 else
                 {
@@ -279,7 +306,7 @@ namespace Implem.Pleasanter.Models.ApiSiteSettings
                 }
                 else if (otherEditorColumns.Any(column => column.StartsWith("_Links-") && long.Parse(column.Substring("_Links-".Length)) == ss.LinkId(linkColumn)))
                 {
-                    dragParamsApiSettingModel.State.Edit = -1;
+                    dragParamsApiSettingModel.State.Edit = 1;
                 }
                 else
                 {
@@ -303,12 +330,23 @@ namespace Implem.Pleasanter.Models.ApiSiteSettings
 
         public void RemoveLinks(Context context)
         {
+            var allEditorColumns = SiteSettings.EditorColumnHash
+                ?.SelectMany(kvp => kvp.Value)
+                .ToHashSet() ?? new HashSet<string>();
             SiteSettings?.Links?.RemoveAll(link =>
             {
                 var site = SiteInfo.Sites(context: context).Get(link.SiteId);
-                return site == null
-                    || (site.String("ReferenceType") == "Wikis"
-                    || link.SiteId == 0);
+                if (site == null
+                    || site.String("ReferenceType") == "Wikis"
+                    || link.SiteId == 0)
+                {
+                    return true;
+                }
+                if (!string.IsNullOrEmpty(link.ColumnName))
+                {
+                    return !allEditorColumns.Contains(link.ColumnName);
+                }
+                return false;
             });
         }
     }

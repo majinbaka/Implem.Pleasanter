@@ -1835,6 +1835,11 @@ namespace Implem.Pleasanter.Models
             SetSite(
                 context: context,
                 initSiteSettings: true);
+            if (AccessStatus == Databases.AccessStatuses.NotFound
+                && context.Action != "createsite")
+            {
+                return ApiResults.Get(ApiResponses.NotFound(context: context));
+            }
             if (!Site.WithinApiLimits(context: context))
             {
                 return ApiResults.Get(ApiResponses.OverLimitApi(

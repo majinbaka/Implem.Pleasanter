@@ -1,0 +1,34 @@
+﻿{
+    "Id": "TabUsedInputItemsDeleted",
+    "Type": 110,
+    "ClientScript": true,
+    "Languages": [
+        {
+            "Body": "The input fields used in the tab will be deleted."
+        },
+        {
+            "Language": "ja",
+            "Body": "タブで使用している入力項目は削除されます。"
+        },
+        {
+            "Language": "zh",
+            "Body": "此标签中使用的输入项将被删除。"
+        },
+        {
+            "Language": "de",
+            "Body": "Die im Tab verwendeten Eingabefelder werden gelöscht."
+        },
+        {
+            "Language": "ko",
+            "Body": "탭에서 사용 중인 입력 항목이 삭제됩니다."
+        },
+        {
+            "Language": "es",
+            "Body": "Se eliminarán los campos de entrada usados en la pestaña."
+        },
+        {
+            "Language": "vn",
+            "Body": "Các trường nhập liệu được sử dụng trong tab sẽ bị xóa."
+        }
+    ]
+}

@@ -2873,7 +2873,12 @@
             }
         }
         .grid-wrap {
+            width: calc(100vw - 20px - 32px);
             margin-top: 8px;
+            overflow: auto;
+        }
+        .grid {
+            width: 200vw;
         }
     }
 

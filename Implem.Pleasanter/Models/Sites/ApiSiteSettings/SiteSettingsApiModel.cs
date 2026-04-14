@@ -18,11 +18,10 @@ namespace Implem.Pleasanter.Models.ApiSiteSettings
         public List<string> GridColumns;
         public List<string> FilterColumns;
         public int? SectionLatestId;
+        public string GeneralTabLabelText;
         public List<SectionApiSettingModel> Sections { get; set; }
         public List<LinkApiSettingModel> Links;
         public string Timestamp;
-
-
         public int? TabLatestId;
         public SettingList<Tab> Tabs;
 

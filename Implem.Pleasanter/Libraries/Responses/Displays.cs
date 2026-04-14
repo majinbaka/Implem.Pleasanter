@@ -7809,6 +7809,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string NewTab(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "NewTab",
+                data: data);
+        }
+
         public static string Next(
             Context context,
             params string[] data)
@@ -11106,6 +11116,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "TabSettings",
+                data: data);
+        }
+
+        public static string TabUsedInputItemsDeleted(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "TabUsedInputItemsDeleted",
                 data: data);
         }
 

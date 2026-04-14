@@ -3293,7 +3293,8 @@ namespace Implem.Pleasanter.Models
                                 column: column)) == true)
                         .Select(column => column.ColumnName)
                         .ToList(),
-                    copyByDefaultOnly: copyByDefaultOnly))
+                    copyByDefaultOnly: copyByDefaultOnly,
+                    isNewRecord: AccessStatus != Databases.AccessStatuses.Selected))
                 .GroupBy(o => o.Key)
                 .Select(o => o.FirstOrDefault())
                 .ToDictionary(o => o.Key, o => o.Value);

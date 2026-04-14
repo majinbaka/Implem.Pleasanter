@@ -812,6 +812,12 @@ pre {
     margin-left: 10px;
 }
 
+.CalendarBody {
+    position: relative;
+    clear: both;
+    overflow: clip;
+}
+
 .CalendarBody table {
     table-layout: fixed;
 }
@@ -830,6 +836,18 @@ div.Calendar > .CalendarBody .grid > thead > tr > th {
 th.calendar-header {
     text-align: center;
     background-color: white;
+    .weekly-day {
+        float: none;
+    }
+    &.today {
+        .weekly-day {
+            font-weight: bold;
+        }
+    }
+}
+
+.CalendarBody th {
+    background-color: whitesmoke;
 }
 
 .CalendarBody .saturday {
@@ -842,7 +860,25 @@ th.calendar-header {
 
 .CalendarBody td {
     padding: 0;
+    background-color: #fff;
     border: solid 1px silver;
+}
+
+.CalendarBody td.is-weekly .day {
+    display: none;
+}
+
+.CalendarBody td.is-weekly.today {
+    border-top: solid 1px silver;
+    border-bottom: solid 1px silver;
+}
+
+.CalendarBody tr:first-of-type td.is-weekly.today {
+    border-top: solid 2px blue;
+}
+
+.CalendarBody tr:last-of-type td.is-weekly.today {
+    border-bottom: solid 2px blue;
 }
 
 .CalendarBody td > div {
@@ -864,11 +900,16 @@ th.calendar-header {
 }
 
 .CalendarBody .item {
-    height: 25px;
-    margin: 5px 0 0;
+    position: relative;
     background-color: lightgoldenrodyellow;
     border: solid 1px silver;
     border-radius: 3px;
+}
+
+.CalendarBody .item,
+.CalendarBody .dummy {
+    height: 25px;
+    margin: 4px 0 0;
 }
 
 .CalendarBody .item.hover {
@@ -877,17 +918,19 @@ th.calendar-header {
 }
 
 .CalendarBody .item.changed {
-    font-weight: bold;
     background-color: yellow;
     border: solid 1px orange;
+    .title-label {
+        font-weight: bold;
+    }
 }
 
 .CalendarBody .item .connection {
     position: relative;
     top: -1px;
-    left: -30px;
+    left: -20px;
     width: 30px;
-    height: 25px;
+    height: calc(100% + 2px);
     background-color: lightgoldenrodyellow;
     border-top: solid 1px silver;
     border-bottom: solid 1px silver;
@@ -900,7 +943,6 @@ th.calendar-header {
 }
 
 .CalendarBody .item .connection.changed {
-    font-weight: bold;
     background-color: yellow;
     border-top: solid 1px orange;
     border-bottom: solid 1px orange;
@@ -908,31 +950,52 @@ th.calendar-header {
 
 .CalendarBody .item .title {
     position: absolute;
+    top: 0;
     z-index: 2;
-    padding: 5px 0;
-    overflow: hidden;
-    white-space: nowrap;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    height: 100%;
+    .edit-icon {
+        padding-left: 4px;
+        font-size: 14px;
+        font-variation-settings:
+            'FILL' 1,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 20;
+        cursor: pointer;
+    }
+    .title-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    [class*='status-'] {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 21px;
+        height: 21px;
+        line-height: 1;
+    }
 }
 
 .CalendarBody .item .title.sub {
     display: none;
 }
 
-.CalendarBody .item .title > span:not(.ui-icon) {
-    margin-right: 3px;
-}
-
 .CalendarBody .dragging {
     z-index: 50;
+    display: flex;
+    align-items: center;
     height: 25px;
-    padding: 5px;
+    padding: 0 5px;
+    line-height: 1;
+    white-space: nowrap;
     background-color: lightgoldenrodyellow;
+    border: solid 1px silver;
     border-radius: 3px;
-}
-
-.CalendarBody .dummy {
-    height: 25px;
-    margin: 5px 0 0;
 }
 
 .fc .fc-scrollgrid-section-sticky > * {

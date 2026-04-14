@@ -13,7 +13,7 @@ namespace Implem.Pleasanter.MCP.Models
 
         private static readonly HashSet<string> ReadOnlyModeAllowedTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "CreateUpdateItemJson",
+            "CreateItemJson",
             "GetItem",
             "GetItems",
             "GetSite",

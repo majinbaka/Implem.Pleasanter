@@ -1,4 +1,5 @@
-﻿using Implem.Libraries.Utilities;
+﻿using Implem.DefinitionAccessor;
+using Implem.Libraries.Utilities;
 using Implem.Pleasanter.Libraries.Requests;
 using Implem.Pleasanter.Libraries.Security;
 using Implem.Pleasanter.Models;
@@ -23,7 +24,8 @@ namespace Implem.Pleasanter.Libraries.Settings
             long id,
             Dictionary<string, string> formData,
             List<string> blankColumns,
-            bool copyByDefaultOnly = false)
+            bool copyByDefaultOnly = false,
+            bool isNewRecord = false)
         {
             var currentSs = ss.Destinations.Get(link.SiteId);
             var canRead = false;
@@ -63,7 +65,12 @@ namespace Implem.Pleasanter.Libraries.Settings
                     || formData.Get($"{ss.ReferenceType}_{lookup.To}") == string.Empty)
                 .Where(lookup => (lookup.OverwriteForm == true
                     && formData.Get("ControlId") == $"{ss.ReferenceType}_{link.ColumnName}")
-                        || formData?.ContainsKey($"{ss.ReferenceType}_{lookup.To}") != true)
+                        || formData?.ContainsKey($"{ss.ReferenceType}_{lookup.To}") != true
+                        || (isNewRecord && IsDefaultValue(
+                            context: context,
+                            ss: ss,
+                            formData: formData,
+                            lookup: lookup)))
                 .ToList();
             var changedFormData = lookups.ToDictionary(
                 lookup => $"{ss.ReferenceType}_{lookup.To}",
@@ -158,6 +165,38 @@ namespace Implem.Pleasanter.Libraries.Settings
                 }
             }
             return changedFormData;
+        }
+
+        private static bool IsDefaultValue(
+            Context context,
+            SiteSettings ss,
+            Dictionary<string, string> formData,
+            Lookup lookup)
+        {
+            var column = ss.GetColumn(
+                context: context,
+                columnName: lookup.To);
+            if (column == null)
+            {
+                return false;
+            }
+            var formValue = formData.Get($"{ss.ReferenceType}_{lookup.To}");
+            var defaultValue = column.GetDefaultInput(context: context);
+            if (defaultValue.IsNullOrEmpty())
+            {
+                if (formValue.IsNullOrEmpty()) return true;
+                switch (Def.ExtendedColumnTypes.Get(column?.ColumnName ?? string.Empty))
+                {
+                    case "Num":
+                        return column.Nullable != true
+                            && formValue?.ToDecimal() == 0;
+                    case "Check":
+                        return formValue?.ToBool() == false;
+                    default:
+                        return false;
+                }
+            }
+            return formValue == defaultValue;
         }
     }
 }

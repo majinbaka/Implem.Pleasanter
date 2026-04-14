@@ -4142,6 +4142,7 @@ namespace Implem.Pleasanter.Libraries.SiteManagement
                             dst.ReadOnly = statusControl.ReadOnly == true;
                             dst.ColumnHash = statusControl.ColumnHash?
                                 .Select(kv => new { c = ss.ColumnHash.Get(kv.Key), t = kv.Value })
+                                .Where(o => o.c != null)
                                 .OrderBy(o => o.c.EditorColumn)
                                 .Select(o => $"{o.c.LabelText}({Displays.Get(context: context, o.t.ToString())})")
                                 .ToList();

@@ -1,6 +1,6 @@
 ﻿{
     "Id": "PasskeyOperationTimeoutOrAbort",
-    "Type": 110,
+    "Type": 240,
     "ClientScript": true,
     "Languages": [
         { "Body": "The passkey operation timed out or was interrupted. Please check your authenticator and try again." },

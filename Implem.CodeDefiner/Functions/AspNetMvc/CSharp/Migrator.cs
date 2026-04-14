@@ -1,4 +1,5 @@
-﻿using Implem.DefinitionAccessor;
+﻿using Implem.CodeDefiner.Functions.Rds.Parts;
+using Implem.DefinitionAccessor;
 using Implem.IRds;
 using Implem.Libraries.DataSources.SqlServer;
 using Implem.Libraries.Utilities;
@@ -32,6 +33,7 @@ namespace Implem.CodeDefiner.Functions.AspNetMvc.CSharp
                         .Contains(columnDefinition.TableName) != true)
                     .Select(columnDefinition => columnDefinition.TableName)
                     .Distinct()
+                    .Where(tableName => !Tables.IsQuartzTable(tableName))
                     .ForEach(tableName =>
                         MigrateTable(
                             tableName: tableName,

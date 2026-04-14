@@ -1,0 +1,34 @@
+﻿{
+    "Id": "NewTab",
+    "Type": 110,
+    "ClientScript": true,
+    "Languages": [
+        {
+            "Body": "Create new tab"
+        },
+        {
+            "Language": "ja",
+            "Body": "タブの新規作成"
+        },
+        {
+            "Language": "zh",
+            "Body": "新建标签"
+        },
+        {
+            "Language": "de",
+            "Body": "Neuen Tab erstellen"
+        },
+        {
+            "Language": "ko",
+            "Body": "새 탭 만들기"
+        },
+        {
+            "Language": "es",
+            "Body": "Crear nueva pestaña"
+        },
+        {
+            "Language": "vn",
+            "Body": "Tạo tab mới"
+        }
+    ]
+}

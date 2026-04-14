@@ -1962,6 +1962,10 @@ namespace Implem.Pleasanter.Models
             {
                 context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
             }
+            if (siteApiModel?.SiteSettings == null)
+            {
+                return ApiResults.BadRequest(context: context);
+            }
             var siteModel = new SiteModel(
                 context: context,
                 parentId: parentId,
@@ -2518,6 +2522,18 @@ namespace Implem.Pleasanter.Models
                     siteSetting: ss,
                     sectionLatestId: siteSettingsApiModel.SectionLatestId,
                     sectionsApiSiteSetting: siteSettingsApiModel.Sections);
+            }
+            if (siteSettingsApiModel.GeneralTabLabelText != null)
+            {
+                ss.GeneralTabLabelText = siteSettingsApiModel.GeneralTabLabelText;
+            }
+            if (siteSettingsApiModel.TabLatestId != null)
+            {
+                ss.TabLatestId = siteSettingsApiModel.TabLatestId;
+            }
+            if (siteSettingsApiModel.Tabs != null)
+            {
+                ss.Tabs = siteSettingsApiModel.Tabs;
             }
             var errorData = siteModel.Update(
                context: context,
@@ -17526,7 +17542,7 @@ namespace Implem.Pleasanter.Models
                         text: Displays.Copy(context: context),
                         controlCss: "button-icon",
                         onClick: "$p.setAndSend('#EditDashboardPart', $(this));",
-                        icon: "ui-icon-trash",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "post")
                     .Button(

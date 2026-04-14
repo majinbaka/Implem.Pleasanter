@@ -6,7 +6,7 @@ RUN npm ci
 RUN npm audit --audit-level high || true
 # Copy all necessary files for frontend build
 COPY Implem.PleasanterFrontend/wwwroot/ ./
-RUN npm run build -- --outDir=/app/dist/assets
+RUN npx --no-install tsc && npx --no-install vite build --outDir=/app/dist/assets
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src

@@ -1125,12 +1125,14 @@ namespace Implem.Pleasanter.Models
             foreach (var column in columns)
             {
                 var columnParam = column.ToString()[1..^1];
-                if (ss.FormulaColumn(columnParam, calculationMethod) != null)
+                var formulaColumn = ss.FormulaColumn(columnParam, calculationMethod);
+                if (formulaColumn != null)
                 {
                     switch (Def.ExtendedColumnTypes.Get(columnParam))
                     {
                         case "Num":
-                            if (GetNum(columnParam).Value == null)
+                            if (GetNum(columnParam).Value == null
+                                && formulaColumn.Nullable != true)
                             {
                                 SetNum(columnParam, new Num(0));
                             }
@@ -1159,7 +1161,8 @@ namespace Implem.Pleasanter.Models
                     switch (Def.ExtendedColumnTypes.Get(column.ColumnName))
                     {
                         case "Num":
-                            if (GetNum(column).Value == null)
+                            if (GetNum(column).Value == null
+                                && column.Nullable != true)
                             {
                                 SetNum(column, new Num(0));
                             }

@@ -243,5 +243,52 @@ namespace Implem.Pleasanter.Models
         {
             return Microsoft.IdentityModel.Tokens.Base64UrlEncoder.DecodeBytes(str);
         }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        public static void SessionSet(Context context, string key, object value)
+        {
+            var stringValue = string.Empty;
+            if (value != null)
+            {
+                if (value is string s)
+                {
+                    stringValue = s;
+                }
+                else
+                {
+                    stringValue = value.ToJson();
+                }
+            }
+            SessionUtilities.Set(
+                context: context,
+                key: $"Passkeys_{key}",
+                value: stringValue);
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        public static string SessionGetString(Context context, string key)
+        {
+            var dic = SessionUtilities.Get(context: context);
+            if (dic.TryGetValue($"Passkeys_{key}", out var json))
+            {
+                return json;
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        public static void SessionRemove(Context context, string key)
+        {
+            SessionUtilities.Remove(
+                context: context,
+                key: $"Passkeys_{key}",
+                page: false);
+        }
     }
 }

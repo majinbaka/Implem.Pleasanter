@@ -2767,7 +2767,7 @@ namespace Implem.Pleasanter.Models
            SiteSettings siteSetting,
            Dictionary<string, List<string>> columnsApiSiteSetting)
         {
-            siteSetting.EditorColumnHash["General"] = columnsApiSiteSetting.Get("General");
+            siteSetting.EditorColumnHash = columnsApiSiteSetting;
         }
 
         /// <summary>

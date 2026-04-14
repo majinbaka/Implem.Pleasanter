@@ -278,15 +278,16 @@ namespace Implem.Libraries.Utilities
 
         public static decimal ToDecimal(this object self, CultureInfo cultureInfo)
         {
-            if (self is string value)
+            var parseCulture = CultureInfo.CreateSpecificCulture(cultureInfo.Name);
+            if (self is string)
             {
-                self = self.NormalizeYenSymbol();
+                self = self.NormalizeYenSymbol(cultureInfo: parseCulture);
             }
             decimal data;
             if (self != null && decimal.TryParse(
                 self.ToString(),
                 NumberStyles.Any,
-                CultureInfo.CreateSpecificCulture(cultureInfo.Name),
+                parseCulture,
                 out data))
             {
                 return data;

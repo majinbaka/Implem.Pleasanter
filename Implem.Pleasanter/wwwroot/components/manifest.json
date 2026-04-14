@@ -1,15 +1,15 @@
 {
-  "_vendor_k0RsABuf.js": {
-    "file": "vendor_k0RsABuf.js",
+  "_vendor_BvD3Vg9F.js": {
+    "file": "vendor_BvD3Vg9F.js",
     "name": "vendor"
   },
   "src/main.ts": {
-    "file": "components_DR0K6XV1.js",
+    "file": "components_BmNmxHOV.js",
     "name": "main",
     "src": "src/main.ts",
     "isEntry": true,
     "imports": [
-      "_vendor_k0RsABuf.js"
+      "_vendor_BvD3Vg9F.js"
     ]
   }
 }

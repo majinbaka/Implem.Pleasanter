@@ -37,6 +37,7 @@ namespace Implem.Pleasanter.Libraries.DataTypes
 
         public Num(Context context, Column column, string value)
         {
+            var parseCulture = context.CultureInfoCurrency(context.Language);
             if (column?.Nullable == true)
             {
                 if (value.IsNullOrEmpty())
@@ -44,15 +45,15 @@ namespace Implem.Pleasanter.Libraries.DataTypes
                     return;
                 }
                 if (!decimal.TryParse(
-                    value.NormalizeYenSymbol(),
+                    value.NormalizeYenSymbol(cultureInfo: parseCulture),
                     NumberStyles.Any,
-                    CultureInfo.CreateSpecificCulture(context.CultureInfo().Name),
+                    parseCulture,
                     out _))
                 {
                     return;
                 }
             }
-            Value = column?.Round(value: value.ToDecimal(cultureInfo: context.CultureInfo()))
+            Value = column?.Round(value: value.ToDecimal(cultureInfo: parseCulture))
                 ?? 0;
         }
 

@@ -33,13 +33,13 @@
             if ($('#data-validation-maxlength-type').val() === 'Regex') {
                 return (
                     value.length +
-                    value.replace(
-                        new RegExp(
-                            '[' + $('#data-validation-maxlength-regex').val() + ']',
-                            'g'
-                        ),
-                        ''
-                    ).length <=
+                        value.replace(
+                            new RegExp(
+                                '[' + $('#data-validation-maxlength-regex').val() + ']',
+                                'g'
+                            ),
+                            ''
+                        ).length <=
                     parseFloat(params)
                 );
             } else {

@@ -132,6 +132,12 @@
 			}
 		}
 
+		td pre {
+			margin: 0;
+			white-space: nowrap;
+			font-family: inherit;
+		}
+
 		span.item-single {
 			border: solid 1px #8f8f8f;
 			padding: 2px;
@@ -554,6 +560,12 @@
 			static parseJsonSafe() {
 				try { return JSON.parse(Common.textarea.value || '{}'); } catch { return {}; }
 			}
+			/**
+			 * ダイアログを表示する。
+			 * @param {string} innerHtml - ダイアログ内に表示する HTML 文字列。
+			 *   この引数はサニタイズ **されない** ため、呼び出し元で
+			 *   ユーザー由来の値には必ず Common.escapeHtml() を適用すること。
+			 */
 			static showDialog(innerHtml) {
 				Common.closeDialog();
 				const bg = document.createElement('div');
@@ -781,7 +793,7 @@
 				try {
 					const tab = site.Tabs?.[this.currentTab];
 					if (!tab || !Array.isArray(tab.Tables) || tab.Tables.length === 0) {
-						document.getElementById('tableContainer').innerHTML = `<span style="color:red;">${this.currentTab}が見つかりません。</span>`;
+						document.getElementById('tableContainer').innerHTML = `<span style="color:red;">${Common.escapeHtml(this.currentTab)}が見つかりません。</span>`;
 						return;
 					}
 					let html = '';
@@ -790,11 +802,11 @@
 						else if (SiteSetting.isTableTypeList(table)) html += SiteSetting.makeTableTypeList(table, tIdx);
 						else if (SiteSetting.isTableTypeOneLineHeaderTable(table)) html += SiteSetting.makeTableTypeOneLineHeaderTable(table, tIdx);
 						else if (SiteSetting.isTableTypeTwoLineHeaderTable(table)) html += SiteSetting.makeTableTypeTwoLineHeaderTable(table, tIdx);
-						else html += `<span style="color:red;">${this.currentTab}のTableTypeが不明です: ${table.TableType}</span>`;
+						else html += `<span style="color:red;">${Common.escapeHtml(this.currentTab)}のTableTypeが不明です: ${Common.escapeHtml(table.TableType)}</span>`;
 					});
 					document.getElementById('tableContainer').innerHTML = html;
 				} catch {
-					document.getElementById('tableContainer').innerHTML = `<span style="color:red;">${this.currentTab}の表示に失敗しました。</span>`;
+					document.getElementById('tableContainer').innerHTML = `<span style="color:red;">${Common.escapeHtml(this.currentTab)}の表示に失敗しました。</span>`;
 				}
 			}
 			// 種別
@@ -805,16 +817,16 @@
 			// 変換
 			static makeTableTypeKeyValue(table, tIdx) {
 				if (!SiteSetting.isTableTypeKeyValue(table)) {
-					return `<span style="color:red;">TableTypeがKeyValueではありません。TableType: ${table.TableType}</span>`;
+					return `<span style="color:red;">TableTypeがKeyValueではありません。TableType: ${Common.escapeHtml(table.TableType)}</span>`;
 				}
-				const gridName = table.Label || '';
+				const gridName = Common.escapeHtml(table.Label || '');
 				let html = '';
 				if (gridName) html += `<div class="table-title">${gridName}</div>`;
 				html += `<div class="scroll-table-wrapper"><table>`;
 				if (Array.isArray(table.Header?.Labels)) {
 					html += '<thead><tr>';
 					table.Header.Labels.forEach((h, idx) => {
-						html += `<th${idx === 0 ? ' class="sticky-col"' : ''}>${h}</th>`;
+						html += `<th${idx === 0 ? ' class="sticky-col"' : ''}>${Common.escapeHtml(h)}</th>`;
 					});
 					html += '</tr></thead>';
 				}
@@ -827,8 +839,7 @@
 						if (col.ReadOnly === true && col.Changed === true) tdClass = ' class="changed"';
 						let tdStyle = '';
 						if (col.Type === 'int' || col.Type === 'long') tdStyle = ' style="text-align:right;"';
-						else if (col.Type === 'string') tdStyle = ' style="white-space:pre-wrap;"';
-						html += `<tr><th class="sticky-col">${col.Label ?? ''}</th><td${tdClass}${tdStyle}>${col.Value ?? ''}</td></tr>`;
+						html += `<tr><th class="sticky-col">${Common.escapeHtml(col.Label ?? '')}</th><td${tdClass}${tdStyle}><pre>${Common.escapeHtml(col.Value ?? '')}</pre></td></tr>`;
 					});
 				}
 				html += '</tbody></table></div>';
@@ -836,23 +847,23 @@
 			}
 			static makeTableTypeList(table, tIdx) {
 				if (!SiteSetting.isTableTypeList(table)) {
-					return `<span style="color:red;">TableTypeがListではありません。TableType: ${table.TableType}</span>`;
+					return `<span style="color:red;">TableTypeがListではありません。TableType: ${Common.escapeHtml(table.TableType)}</span>`;
 				}
-				const gridName = table.Label || '';
+				const gridName = Common.escapeHtml(table.Label || '');
 				let html = '';
 				if (gridName) html += `<div class="table-title">${gridName}</div>`;
 				html += '<div class="scroll-table-wrapper"><table>';
 				if (Array.isArray(table.Header?.Labels)) {
 					html += '<thead><tr>';
-					table.Header.Labels.forEach(h => html += `<th>${h}</th>`);
+					table.Header.Labels.forEach(h => html += `<th>${Common.escapeHtml(h)}</th>`);
 					html += '</tr></thead>';
 				}
 				if (Array.isArray(table.Columns)) {
 					html += '<tbody>';
 					table.Columns.forEach(col => {
 						html += '<tr>';
-						if (Array.isArray(col)) col.forEach(cell => html += `<td>${cell}</td>`);
-						else html += `<td>${col}</td>`;
+						if (Array.isArray(col)) col.forEach(cell => html += `<td><pre>${Common.escapeHtml(cell)}</pre></td>`);
+						else html += `<td><pre>${Common.escapeHtml(col)}</pre></td>`;
 						html += '</tr>';
 					});
 					html += '</tbody>';
@@ -869,7 +880,7 @@
 				let headerRow = '<tr>';
 				table.Header.Labels.forEach((h, idx) => {
 					const thClass = idx === 0 ? ' class="sticky-col"' : '';
-					headerRow += `<th${thClass}>${h.Text ?? h.Key ?? ''}</th>`;
+					headerRow += `<th${thClass}>${Common.escapeHtml(h.Text ?? h.Key ?? '')}</th>`;
 				});
 				headerRow += '</tr>';
 				// データ行
@@ -881,11 +892,13 @@
 						const key = h.Key;
 						let tdClass = '';
 						let value = (key && col[key] !== undefined) ? col[key] : '';
+						let valueIsHtml = false;
 						if (typeof value === 'object' && value !== null) {
 							if (Array.isArray(value)) {
 								value = SiteSetting.convJson2Html(value, key, table);
+								valueIsHtml = true;
 							} else {
-								value = JSON.stringify(value);
+								value = Common.escapeHtml(JSON.stringify(value));
 							}
 						}
 						if (changed.includes(key)) {
@@ -895,32 +908,32 @@
 						} else if (idx === 0) {
 							tdClass = ' class="sticky-col"';
 						}
-						bodyRows += `<td${tdClass}>${value}</td>`;
+						bodyRows += `<td${tdClass}>${valueIsHtml ? value : `<pre>${Common.escapeHtml(value)}</pre>`}</td>`;
 					});
 					bodyRows += '</tr>';
 				});
-				const gridName = table.Label || '';
+				const gridName = Common.escapeHtml(table.Label || '');
 				let html = '';
 				if (gridName) html += `<div class="table-title">${gridName}</div>`;
 				html += `<div class="scroll-table-wrapper"><table><thead>${headerRow}</thead><tbody>${bodyRows}</tbody></table></div>`;
 				return html;
 			}
 			static makeGenericTable(table, tIdx) {
-				const gridName = table.Label || '';
+				const gridName = Common.escapeHtml(table.Label || '');
 				let html = '';
 				if (gridName) html += `<div class="table-title">${gridName}</div>`;
 				html += '<div class="scroll-table-wrapper"><table>';
 				if (Array.isArray(table.Header?.Labels)) {
 					html += '<thead><tr>';
-					table.Header.Labels.forEach(h => html += `<th>${h}</th>`);
+					table.Header.Labels.forEach(h => html += `<th>${Common.escapeHtml(h)}</th>`);
 					html += '</tr></thead>';
 				}
 				if (Array.isArray(table.Columns)) {
 					html += '<tbody>';
 					table.Columns.forEach(col => {
 						html += '<tr>';
-						if (Array.isArray(col)) col.forEach(cell => html += `<td>${cell}</td>`);
-						else html += `<td>${col}</td>`;
+						if (Array.isArray(col)) col.forEach(cell => html += `<td><pre>${Common.escapeHtml(cell)}</pre></td>`);
+						else html += `<td><pre>${Common.escapeHtml(col)}</pre></td>`;
 						html += '</tr>';
 					});
 					html += '</tbody>';
@@ -937,14 +950,14 @@
 						let html = '<div class="array">';
 						value.forEach(row => {
 							html += '<span class="item-pair">';
-							keys.forEach(kk => html += `<span class="${kk}">${row[kk]}</span>`);
+							keys.forEach(kk => html += `<span class="${Common.escapeHtml(kk)}">${Common.escapeHtml(row[kk])}</span>`);
 							html += '</span>';
 						});
 						html += '</div>';
 						return html;
 					} else {
 						let html = '<div class="array">';
-						value.forEach(row => { html += `<span class="item-single">${row}</span>`; });
+						value.forEach(row => { html += `<span class="item-single">${Common.escapeHtml(row)}</span>`; });
 						html += '</div>';
 						return html;
 					}
@@ -979,7 +992,7 @@
 				let groupHeaderRow = '<tr>';
 				let colIdx = 0;
 				groups.forEach(g => {
-					const groupName = g.groupName !== '' ? g.groupName : '&nbsp;';
+					const groupName = g.groupName !== '' ? Common.escapeHtml(g.groupName) : '&nbsp;';
 					const thClass = colIdx === firstColIdx ? ' class="sticky-col"' : '';
 					groupHeaderRow += `<th${thClass} colspan="${g.keys.length}">${groupName}</th>`;
 					colIdx += g.keys.length;
@@ -991,7 +1004,7 @@
 				groups.forEach(g => {
 					g.headers.forEach(h => {
 						const thClass = headerColIdx === firstColIdx ? ' class="sticky-col"' : '';
-						itemHeaderRow += `<th${thClass}>${h}</th>`;
+						itemHeaderRow += `<th${thClass}>${Common.escapeHtml(h)}</th>`;
 						headerColIdx++;
 					});
 				});
@@ -1054,11 +1067,12 @@
 											tdClass = ' class="sticky-col"';
 										}
 										let rowspan = maxNestRows > 1 ? ` rowspan="${maxNestRows}"` : '';
+										let valueIsHtml = false;
 										if (typeof value === 'object' && value !== null) {
-											if (Array.isArray(value)) value = SiteSetting.convJson2Html(value, k, table);
-											else value = JSON.stringify(value);
+											if (Array.isArray(value)) { value = SiteSetting.convJson2Html(value, k, table); valueIsHtml = true; }
+											else { value = Common.escapeHtml(JSON.stringify(value)); }
 										}
-										bodyRows += `<td${tdClass}${rowspan}>${value !== undefined ? value : ''}</td>`;
+										bodyRows += `<td${tdClass}${rowspan}>${value !== undefined ? (valueIsHtml ? value : `<pre>${Common.escapeHtml(value)}</pre>`) : ''}</td>`;
 									});
 								}
 							} else {
@@ -1075,13 +1089,14 @@
 										} else {
 											value = undefined;
 										}
+										let valueIsHtml = false;
 										if (typeof value === 'object' && value !== null) {
-											if (Array.isArray(value)) value = SiteSetting.convJson2Html(value, k, table);
-											else value = JSON.stringify(value);
+											if (Array.isArray(value)) { value = SiteSetting.convJson2Html(value, k, table); valueIsHtml = true; }
+											else { value = Common.escapeHtml(JSON.stringify(value)); }
 										}
 										if (readonyRow.includes(k) || roCols.includes(child) || value === undefined || value === null) tdClass = ' class="missing"';
 										else if (chCols.includes(child)) tdClass = ' class="changed"';
-										bodyRows += `<td${tdClass}>${value !== undefined ? value : ''}</td>`;
+										bodyRows += `<td${tdClass}>${value !== undefined ? (valueIsHtml ? value : `<pre>${Common.escapeHtml(value)}</pre>`) : ''}</td>`;
 									});
 								} else if (rowIdx === nestLen && nestLen < maxNestRows) {
 									let tdClass = ' class="missing"';
@@ -1094,7 +1109,7 @@
 					}
 				});
 
-				const gridName = table.Label || '';
+				const gridName = Common.escapeHtml(table.Label || '');
 				let html = '';
 				if (gridName) html += `<div class="table-title">${gridName}</div>`;
 				html += `<div class="scroll-table-wrapper"><table><thead>${groupHeaderRow}${itemHeaderRow}</thead><tbody>${bodyRows}</tbody></table></div>`;
@@ -1383,6 +1398,10 @@
 				return (data.ERDiagrams && Array.isArray(data.ERDiagrams.Tables)) ? data.ERDiagrams.Tables : [];
 			}
 			toMermaid(tables) {
+				// mermaid構文上 []{}|` は特殊文字でありエスケープが困難なため除去する（情報欠落を伴うが意図的）
+				function escapeMermaid(v) {
+					return String(v ?? '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[\n\r]/g, ' ').replace(/"/g, "'").replace(/[\[\]{}|`]/g, '');
+				}
 				let lines = ['erDiagram'];
 				lines.push(`
 				%%{init:{
@@ -1402,16 +1421,16 @@
 				tables.forEach(table => {
 					let cols = (table.Columns || []).map(col => {
 						const k = (col.Type == 'ID') ? 'PK' : (col.RelationSiteId ? 'FK' : '');
-						return `  ${col.TypeRaw} ${col.Type} ${k} "${col.Label}"`;
+						return `  ${escapeMermaid(col.TypeRaw)} ${escapeMermaid(col.Type)} ${k} "${escapeMermaid(col.Label)}"`;
 					}).join('\n');
-					lines.push(`  TBL_${table.SiteId}["${table.Title}(${table.SiteId})"] {\n${cols}\n}`);
+					lines.push(`  TBL_${table.SiteId}["${escapeMermaid(table.Title)}(${table.SiteId})"] {\n${cols}\n}`);
 				});
 				tables.forEach(table => {
 					(table.Columns || []).forEach(col => {
 						if (col.RelationSiteId) {
 							const parent = tables.find(t => t.SiteId === col.RelationSiteId);
 							if (parent) {
-								lines.push(`  TBL_${parent.SiteId} |o--o{ TBL_${table.SiteId} : "${col.Label}"`);
+								lines.push(`  TBL_${parent.SiteId} |o--o{ TBL_${table.SiteId} : "${escapeMermaid(col.Label)}"`);
 							}
 						}
 					});
@@ -1430,7 +1449,7 @@
 				this.zoomScale = 1.0;
 				this.applyZoom();
 				if (erTables.length) {
-					mermaid.initialize({ startOnLoad: false });
+					mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
 					mermaid.render('erDiagramSvg', mermaidText)
 						.then(({ svg }) => {
 							renderArea.innerHTML = svg;
@@ -1438,7 +1457,7 @@
 							this.fitToContainer();
 						})
 						.catch(e => {
-							renderArea.innerHTML = `<span style="color:red;">${t('erd_mermaid_error', e.message)}</span>`;
+							renderArea.innerHTML = `<span style="color:red;">${t('erd_mermaid_error', Common.escapeHtml(e.message))}</span>`;
 						});
 				}
 			}
@@ -1764,7 +1783,7 @@
 							}
 						})
 						.catch(e => {
-							document.getElementById('tableContainer').innerHTML = `<span style="color:red;">${t('common_data_load_failed')}: ${e.message}</span>`;
+							document.getElementById('tableContainer').innerHTML = `<span style="color:red;">${t('common_data_load_failed')}: ${Common.escapeHtml(e.message)}</span>`;
 						});
 				} else {
 					try {

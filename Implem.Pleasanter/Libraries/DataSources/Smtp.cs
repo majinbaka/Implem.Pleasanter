@@ -102,6 +102,7 @@ namespace Implem.Pleasanter.Libraries.DataSources
                         var mimePart = new MimePart(mimeType);
                         mimePart.FileName = Strings.CoalesceEmpty(fileName, "NoName");
                         mimePart.Content = new MimeContent(stream);
+                        mimePart.ContentTransferEncoding = ContentEncoding.Base64;
                         return mimePart;
                     }).ToList();
                 if (mimeParts?.Count > 0)

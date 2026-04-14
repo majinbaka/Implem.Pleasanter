@@ -50,12 +50,15 @@ class InputDate extends HTMLElement {
 
     disconnectedCallback() {
         if (this.dataPicker) this.dataPicker.destroy();
+        if (this.inputElm) this.inputElm.removeEventListener('change', this.onChange);
+        if (this.currentElem) this.currentElem.removeEventListener('click', this.onCurrent);
     }
 
     private init() {
         this.initDatePicker();
         this.setDateFormat();
 
+        if (this.inputElm) this.inputElm.addEventListener('change', this.onChange);
         if (this.currentElem) this.currentElem.addEventListener('click', this.onCurrent);
     }
 
@@ -101,6 +104,14 @@ class InputDate extends HTMLElement {
         }
         this.dateFnsFormat = dateFnsFormat;
     }
+
+    private onChange = () => {
+        if (!this.inputElm) return;
+        $p.set($(this.inputElm), this.inputElm.value);
+        if (this.inputElm.classList.contains('auto-postback')) {
+            $p.send($(this.inputElm));
+        }
+    };
 
     private onCurrent = () => {
         if (!this.inputElm || !this.dateFnsFormat) return;

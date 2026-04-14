@@ -210,6 +210,9 @@
     --sd-sortable-empty-bg: rgb(255 255 255 / 80%);
     --sd-sortable-empty-text: var(--nonColor03);
     --sd-sortable-empty-border: var(--primarySub01);
+    --sd-edit-tab-bg: var(--nonColor14);
+    --sd-edit-tab-stepper-icon: var(--nonColor14);
+    --sd-edit-tab-stepper-remove: #ffe2e2;
     --sd-unit-resource-bg: var(--nonColor14);
     --sd-unit-sortable-bg: var(--sd-base-bg);
     --sd-unit-border: var(--sd-base-border);
@@ -221,7 +224,7 @@
     --sd-unit-ghost-border: var(--primaryDark);
     --sd-unit-ghost-opacity: 0.8;
     --sd-unit-edit-count-text: var(--nonColor16);
-    --sd-unit-edit-count-bg: var(--nonColor09);
+    --sd-unit-edit-count-bg: var(--nonColor08);
     --sd-unit-edit-tag-text: var(--sd-base-text);
     --sd-unit-edit-tag-bg: var(--nonColor14);
     --sd-unit-edit-tag-border: var(--nonColor10);

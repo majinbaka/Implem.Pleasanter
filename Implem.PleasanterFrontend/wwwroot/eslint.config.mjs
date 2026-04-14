@@ -20,6 +20,7 @@ export default defineConfig([
                 FullCalendar: 'readonly',
                 GridStack: 'readonly',
                 QRCode: 'readonly',
+                grecaptcha: 'readonly',
                 $p: 'readonly',
                 formId: 'writable',
                 controlId: 'writable',

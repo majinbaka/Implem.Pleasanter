@@ -1,6 +1,6 @@
 ﻿{
     "Id": "PasskeyOperationTimeout",
-    "Type": 110,
+    "Type": 240,
     "ClientScript": true,
     "Languages": [
         { "Body": "The passkey operation timed out. Please try again." },

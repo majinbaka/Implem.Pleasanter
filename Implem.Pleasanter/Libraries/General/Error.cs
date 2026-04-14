@@ -100,6 +100,12 @@ namespace Implem.Pleasanter.Libraries.General
             OverTenantStorageSize,
             OverTotalLimitSize,
             ParameterSyntaxError,
+            PasskeyNotAvailable,
+            PasskeyOperationAborted,
+            PasskeyOperationTimeout,
+            PasskeyOperationTimeoutOrAbort,
+            PasskeyResponseInvalid,
+            PasskeyServerUnavailable,
             PasswordHasBeenUsed,
             PasswordNotChanged,
             PasswordPolicyViolation,
@@ -503,6 +509,30 @@ namespace Implem.Pleasanter.Libraries.General
                         data: data);
                 case Types.ParameterSyntaxError:
                     return Messages.ParameterSyntaxError(
+                        context: context,
+                        data: data);
+                case Types.PasskeyNotAvailable:
+                    return Messages.PasskeyNotAvailable(
+                        context: context,
+                        data: data);
+                case Types.PasskeyOperationAborted:
+                    return Messages.PasskeyOperationAborted(
+                        context: context,
+                        data: data);
+                case Types.PasskeyOperationTimeout:
+                    return Messages.PasskeyOperationTimeout(
+                        context: context,
+                        data: data);
+                case Types.PasskeyOperationTimeoutOrAbort:
+                    return Messages.PasskeyOperationTimeoutOrAbort(
+                        context: context,
+                        data: data);
+                case Types.PasskeyResponseInvalid:
+                    return Messages.PasskeyResponseInvalid(
+                        context: context,
+                        data: data);
+                case Types.PasskeyServerUnavailable:
+                    return Messages.PasskeyServerUnavailable(
                         context: context,
                         data: data);
                 case Types.PasswordHasBeenUsed:

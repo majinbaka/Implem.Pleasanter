@@ -12,5 +12,6 @@ namespace Implem.ParameterAccessor.Parts
         public string ServerDomain;
         public string ServerName;
         public HashSet<string> Origins;
+        public string UserVerificationRequirement;
     }
 }

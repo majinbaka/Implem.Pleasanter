@@ -21,7 +21,7 @@ namespace Implem.Pleasanter.MCP.Prompts
 ## 手順
 1. GetUserIdByName で対象ユーザーのIDを特定（複数ヒット時はユーザーに確認、未検出時は中断）
 2. GetItem で現在のレコード内容を確認
-3. CreateUpdateItemJson で Manager/Owner に対象ユーザーのIDを設定
+3. CreateItemJson で Manager/Owner に対象ユーザーのIDを設定
 4. 更新内容をユーザーに確認後、UpdateItem で実行
 
 ## 注意
@@ -71,7 +71,7 @@ namespace Implem.Pleasanter.MCP.Prompts
 2. CreateViewJson(overdue: true)で条件作成
 3. GetItems で抽出（レスポンスのTotalCountとoffsetを比較し、未取得分があればoffsetを加算して次ページ取得。TotalCount以上になったら終了）
 4. 0件なら通知不要で終了
-5. サマリ作成 → ユーザーに宛先・件名・本文を確認後 send_email で送信
+5. サマリ作成 → ユーザーに宛先・件名・本文を確認後 SendEmail で送信
 
 ## 注意
 - 0件時はメール送信しない
@@ -98,12 +98,36 @@ namespace Implem.Pleasanter.MCP.Prompts
    - "保存値,表示値" 形式（例: "100,新規"）→ 保存値 "100" を使用
 3. フィルタ: columnFilterHashには保存値を指定（表示値では検索不可）
 4. 更新:
-   - 分類項目(ClassA〜Z): 表示値で指定可（CreateUpdateItemJsonが自動変換）
+   - 分類項目(ClassA〜Z): 表示値で指定可（CreateItemJsonが自動変換）
    - Status: 数値の保存値で指定（自動変換されない。例: 実施中 → 200）
 
 ## 注意
 - フィルタ時は必ず保存値を使用
 - 詳細は resource://pleasanter/specs/choices-pattern 参照
+""");
+        }
+
+        [McpServerPrompt(Name = "save-records")]
+        [Description("レコードを作成してサイトに保存")]
+        public static ChatMessage SaveRecords(
+            [Description("レコード作成リクエスト（サイトIDまたはサイト名・登録内容等）")]
+                string request)
+        {
+            return new ChatMessage(
+                ChatRole.User,
+                $$"""
+リクエスト: {{request}}
+
+## 手順
+1. サイトID特定: サイトID指定済み → そのまま使用 / サイト名指定 → GetSiteIdByTitle で特定（複数ヒット時はユーザーに確認）
+2. CreateItemJson で作成用JSON作成（分類項目は日本語表示値で指定可、自動変換される）
+3. 作成内容をユーザーに確認
+4. AddItem で作成実行
+
+## 注意
+- CreateItemJson単独で終わりにしない（必ずAddItemまで実行）
+- 一括作成時は対象件数と内容を提示しユーザーの確認を得る
+- 項目名が不明な場合はGetSiteで項目定義を確認
 """);
         }
 
@@ -190,7 +214,7 @@ namespace Implem.Pleasanter.MCP.Prompts
 ## 手順
 1. 対象レコードIDとreference（issues/results等）を特定（不明時はGetItemで確認）
 2. 宛先（To/Cc/Bcc）・タイトル・本文を確認
-3. ユーザーに送信内容を提示し確認後、send_email を実行
+3. ユーザーに送信内容を提示し確認後、SendEmail を実行
 
 ## 注意
 - 誤送信防止のため、送信前に必ずユーザーに宛先・件名・本文を確認
@@ -211,14 +235,14 @@ namespace Implem.Pleasanter.MCP.Prompts
 リクエスト: {{request}}
 
 ## 手順
-1. GetItem で現在のレコード内容を確認
-2. CreateUpdateItemJson で更新用JSON作成（分類項目は日本語表示値で指定可、自動変換される）
+1. GetItem で現在のレコード内容を確認（応答の SiteId を控える）
+2. CreateItemJson で更新用JSON作成（siteId には手順1で取得した SiteId を指定、分類項目は日本語表示値で指定可、自動変換される）
 3. 更新内容をユーザーに確認
 4. UpdateItem で更新実行
 
 ## 注意
 - 更新前に必ずGetItemで現状確認
-- CreateUpdateItemJson単独で終わりにしない（必ずUpdateItemまで実行）
+- CreateItemJson単独で終わりにしない（必ずUpdateItemまで実行）
 - 一括更新時は対象件数を提示しユーザーの確認を得る
 - 矛盾する値が指定された場合はどの値を採用するかユーザーに確認
 """);

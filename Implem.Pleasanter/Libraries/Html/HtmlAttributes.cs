@@ -466,9 +466,10 @@ namespace Implem.Pleasanter.Libraries.Html
             return this;
         }
 
-        public HtmlAttributes DataValue(string value, bool _using = true)
+        public HtmlAttributes DataValue(string value, bool allowEmpty = false, bool _using = true)
         {
-            if (!value.IsNullOrEmpty() && _using)
+            var hasValue = allowEmpty ? value != null : !value.IsNullOrEmpty();
+            if (hasValue && _using)
             {
                 Add("data-value");
                 Add(HttpUtility.HtmlEncode(value));
@@ -741,7 +742,7 @@ namespace Implem.Pleasanter.Libraries.Html
             if (!value.IsNullOrEmpty() && _using)
             {
                 Add("data-tooltip");
-                Add(value);
+                Add(HttpUtility.HtmlEncode(value));
             }
             return this;
         }

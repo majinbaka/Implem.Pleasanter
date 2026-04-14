@@ -206,8 +206,8 @@ namespace Implem.Pleasanter.MCP.Infrastructure
                     Status = statusCode,
                     JsonRpcErrorCode = ExtractJsonRpcErrorCode(responseBody),
                     ErrMessage = ExtractErrorMessage(responseBody),
-                    RequestData = requestBody,
-                    ResponseData = TruncateResponseData(responseBody),
+                    RequestData = DecodeUnicodeEscapes(SanitizeBase64Data(requestBody)),
+                    ResponseData = TruncateResponseData(DecodeUnicodeEscapes(SanitizeBase64Data(responseBody))),
                     UserHostAddress = userHostAddress,
                     UserAgent = userAgent
                 };
@@ -333,6 +333,107 @@ namespace Implem.Pleasanter.MCP.Infrastructure
             return null;
         }
 
+        private static string SanitizeBase64Data(string body)
+        {
+            if (string.IsNullOrEmpty(body)) return body;
+            if (!body.Contains("Base64")) return body;
+            if (body.StartsWith("event: "))
+            {
+                return SanitizeSseBody(body);
+            }
+            return SanitizeJson(body);
+        }
+
+        private static string SanitizeSseBody(string sseBody)
+        {
+            try
+            {
+                var lines = sseBody.Split('\n');
+                for (var i = 0; i < lines.Length; i++)
+                {
+                    var trimmed = lines[i].TrimEnd('\r');
+                    if (trimmed.StartsWith("data: "))
+                    {
+                        var jsonPart = trimmed["data: ".Length..];
+                        var sanitized = SanitizeJson(jsonPart);
+                        lines[i] = "data: " + sanitized;
+                    }
+                }
+                return string.Join('\n', lines);
+            }
+            catch
+            {
+                return sseBody;
+            }
+        }
+
+        private static string SanitizeJson(string json)
+        {
+            if (string.IsNullOrEmpty(json)) return json;
+            try
+            {
+                using var document = JsonDocument.Parse(json);
+                using var stream = new MemoryStream();
+                using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
+                {
+                    Indented = false
+                }))
+                {
+                    SanitizeElement(document.RootElement, writer);
+                }
+                return System.Text.Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length);
+            }
+            catch
+            {
+                return json;
+            }
+        }
+
+        private static void SanitizeElement(JsonElement element, Utf8JsonWriter writer)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    writer.WriteStartObject();
+                    foreach (var property in element.EnumerateObject())
+                    {
+                        if (property.Name == "Base64")
+                        {
+                            continue;
+                        }
+                        writer.WritePropertyName(property.Name);
+                        SanitizeElement(property.Value, writer);
+                    }
+                    writer.WriteEndObject();
+                    break;
+                case JsonValueKind.Array:
+                    writer.WriteStartArray();
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        SanitizeElement(item, writer);
+                    }
+                    writer.WriteEndArray();
+                    break;
+                case JsonValueKind.String:
+                    var stringValue = element.GetString();
+                    if (stringValue != null
+                        && stringValue.Length > 1
+                        && (stringValue[0] == '{' || stringValue[0] == '['))
+                    {
+                        var sanitized = SanitizeBase64Data(stringValue);
+                        writer.WriteStringValue(sanitized);
+                    }
+                    else
+                    {
+                        element.WriteTo(writer);
+                    }
+                    break;
+                default:
+                    element.WriteTo(writer);
+                    break;
+            }
+        }
+
         private static string TruncateResponseData(string responseBody)
         {
             if (string.IsNullOrEmpty(responseBody)) return null;
@@ -343,6 +444,103 @@ namespace Implem.Pleasanter.MCP.Infrastructure
             return responseBody.Length > maxLength
                 ? responseBody[..maxLength] + "...(truncated)"
                 : responseBody;
+        }
+
+        private static string DecodeUnicodeEscapes(string body)
+        {
+            if (string.IsNullOrEmpty(body)) return body;
+            if (body.StartsWith("event: "))
+            {
+                return DecodeUnicodeEscapesSse(body);
+            }
+            return DecodeUnicodeEscapesJson(body);
+        }
+
+        private static string DecodeUnicodeEscapesSse(string sseBody)
+        {
+            try
+            {
+                var lines = sseBody.Split('\n');
+                for (var i = 0; i < lines.Length; i++)
+                {
+                    var trimmed = lines[i].TrimEnd('\r');
+                    if (trimmed.StartsWith("data: "))
+                    {
+                        var jsonPart = trimmed["data: ".Length..];
+                        var decoded = DecodeUnicodeEscapesJson(jsonPart);
+                        lines[i] = "data: " + decoded;
+                    }
+                }
+                return string.Join('\n', lines);
+            }
+            catch
+            {
+                return sseBody;
+            }
+        }
+
+        private static string DecodeUnicodeEscapesJson(string json)
+        {
+            if (string.IsNullOrEmpty(json)) return json;
+            try
+            {
+                using var document = JsonDocument.Parse(json);
+                using var stream = new MemoryStream();
+                using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
+                {
+                    Indented = false,
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                }))
+                {
+                    DecodeElement(document.RootElement, writer);
+                }
+                return System.Text.Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length);
+            }
+            catch
+            {
+                return json;
+            }
+        }
+
+        private static void DecodeElement(JsonElement element, Utf8JsonWriter writer)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    writer.WriteStartObject();
+                    foreach (var property in element.EnumerateObject())
+                    {
+                        writer.WritePropertyName(property.Name);
+                        DecodeElement(property.Value, writer);
+                    }
+                    writer.WriteEndObject();
+                    break;
+                case JsonValueKind.Array:
+                    writer.WriteStartArray();
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        DecodeElement(item, writer);
+                    }
+                    writer.WriteEndArray();
+                    break;
+                case JsonValueKind.String:
+                    var stringValue = element.GetString();
+                    if (stringValue != null
+                        && stringValue.Length > 1
+                        && (stringValue[0] == '{' || stringValue[0] == '['))
+                    {
+                        var decoded = DecodeUnicodeEscapes(stringValue);
+                        writer.WriteStringValue(decoded);
+                    }
+                    else
+                    {
+                        element.WriteTo(writer);
+                    }
+                    break;
+                default:
+                    element.WriteTo(writer);
+                    break;
+            }
         }
 
         private async Task<McpRequestInfo> TryExtractMcpRequestInfo(HttpContext context)

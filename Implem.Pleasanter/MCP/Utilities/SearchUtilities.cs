@@ -1,4 +1,5 @@
-﻿using Implem.Pleasanter.Libraries.DataSources;
+﻿using Implem.DefinitionAccessor;
+using Implem.Pleasanter.Libraries.DataSources;
 using Implem.Pleasanter.Libraries.Requests;
 using Implem.Pleasanter.Libraries.Responses;
 using Implem.Pleasanter.Libraries.Settings;
@@ -164,7 +165,10 @@ namespace Implem.Pleasanter.MCP.Utilities
             string searchValue)
         {
             var where = Rds.SitesWhere()
-                .TenantId(value: context.TenantId);
+                .TenantId(value: context.TenantId)
+                .Add(
+                    raw: Def.Sql.HasPermission,
+                    _using: !context.HasPrivilege);
 
             if (!string.IsNullOrEmpty(searchValue))
             {

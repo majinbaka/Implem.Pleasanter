@@ -10,6 +10,10 @@ namespace Implem.Pleasanter.Libraries.Requests
         {
             var useUsersView = ss.SaveViewType == SiteSettings.SaveViewTypes.User;
             setSession = setSession && ss.SaveViewType != SiteSettings.SaveViewTypes.None;
+            if (context.IsMcp)
+            {
+                setSession = false;
+            }
             var view = !context.Ajax
                 ? context.QueryStrings.Data("View")?.Deserialize<View>()
                 : null;
@@ -159,6 +163,10 @@ namespace Implem.Pleasanter.Libraries.Requests
             var useUsersView = ss.SaveViewType == SiteSettings.SaveViewTypes.User;
             var sessionData = useUsersView ? context.UserSessionData : context.SessionData;
             setSession = setSession && ss.SaveViewType != SiteSettings.SaveViewTypes.None;
+            if (context.IsMcp)
+            {
+                setSession = false;
+            }
             var view = sessionData.Get(key)?.Deserialize<View>();
             if (view == null)
             {

@@ -1,6 +1,7 @@
-{
+﻿{
     "Id": "Add",
     "Type": 110,
+    "ClientScript": true,
     "Languages": [
         {
             "Body": "Add"

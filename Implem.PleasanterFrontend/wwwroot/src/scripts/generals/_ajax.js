@@ -1,4 +1,4 @@
-﻿$(function () {
+$(function () {
     // metaタグからCSRFトークンを取得
     var $csrfToken = $('meta[name="csrf-token"]');
     // metaタグが存在する場合のみ、jQueryのAJAXグローバル設定を行う
@@ -299,7 +299,9 @@ $p.captcha = {
             if ($widget.length) {
                 try {
                     $('html, body').animate({ scrollTop: $widget.offset().top - 80 }, 200);
-                } catch (e) {}
+                } catch (e) {
+                    //
+                }
             }
 
             $p.setErrorMessage('CaptchaTokenMissing');

@@ -1,6 +1,6 @@
 ﻿{
     "Id": "PasskeyServerUnavailable",
-    "Type": 110,
+    "Type": 240,
     "ClientScript": true,
     "Languages": [
         { "Body": "The server is temporarily unable to process passkey requests. Please try again later or contact your administrator." },

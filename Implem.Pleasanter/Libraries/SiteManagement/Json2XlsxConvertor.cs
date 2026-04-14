@@ -11,6 +11,15 @@ namespace Implem.Pleasanter.Libraries.SiteManagement
 {
     internal class Json2XlsxConvertor
     {
+        private const int ExcelMaxCellLength = 32767;
+        private const string TruncatedSuffix = "...(truncated)";
+
+        private static string SafeCellValue(string value)
+        {
+            if (value == null) return string.Empty;
+            if (value.Length <= ExcelMaxCellLength) return value;
+            return value.Substring(0, ExcelMaxCellLength - TruncatedSuffix.Length) + TruncatedSuffix;
+        }
         internal class Log
         {
             public enum LogLevel
@@ -42,7 +51,7 @@ namespace Implem.Pleasanter.Libraries.SiteManagement
             public CellStyleManager CellStyleManager;
             public string WorkDir;
             public string ZipFileName;
-            public List<Log> Logs = new ();
+            public List<Log> Logs = new();
 
             public Param()
             {
@@ -361,7 +370,7 @@ namespace Implem.Pleasanter.Libraries.SiteManagement
                             {
                                 var cell = ws.Cell(currentRow + nestRowIdx, dataColIdx);
                                 var value = GetNestedValue(col: col, key: key, nestRowIdx: nestRowIdx);
-                                cell.Value = value ?? string.Empty;
+                                cell.Value = SafeCellValue(value ?? string.Empty);
                                 bool isChanged = false;
                                 if (key.Contains("."))
                                 {
@@ -520,11 +529,11 @@ namespace Implem.Pleasanter.Libraries.SiteManagement
                         var col = columns[i] as JObject;
                         if (col == null) continue;
                         var cell0 = ws.Cell(i + 2, 1);
-                        cell0.Value = col["Label"]?.ToString() ?? string.Empty;
+                        cell0.Value = SafeCellValue(col["Label"]?.ToString() ?? string.Empty);
                         styleManager.ApplyLeftEdgeStyle(cell0);
                         var cell1 = ws.Cell(i + 2, 2);
                         var value = col["Value"]?.ToString() ?? string.Empty;
-                        cell1.Value = value;
+                        cell1.Value = SafeCellValue(value);
                         if (col["ReadOnly"]?.ToObject<bool>() == true)
                         {
                             styleManager.ApplyReadOnlyOrEmptyStyle(cell1);
@@ -624,7 +633,7 @@ namespace Implem.Pleasanter.Libraries.SiteManagement
                                     string key = l["Key"]?.ToString() ?? l.ToString();
                                     var cell = ws.Cell(i + dataRowOffset + 1, colIdx);
                                     var value = col[key]?.ToString() ?? string.Empty;
-                                    cell.Value = value;
+                                    cell.Value = SafeCellValue(value);
                                     if (colIdx == 1)
                                     {
                                         styleManager.ApplyLeftEdgeStyle(cell);
@@ -653,7 +662,7 @@ namespace Implem.Pleasanter.Libraries.SiteManagement
                                 string key = h.Type == JTokenType.Object ? h["Key"]?.ToString() ?? h["Value"]?.ToString() ?? h.ToString() : h.ToString();
                                 var cell = ws.Cell(i + dataRowOffset + 1, j + 1);
                                 var value = col[key]?.ToString() ?? string.Empty;
-                                cell.Value = value;
+                                cell.Value = SafeCellValue(value);
                                 if (j == 0)
                                 {
                                     styleManager.ApplyLeftEdgeStyle(cell);
@@ -708,13 +717,13 @@ namespace Implem.Pleasanter.Libraries.SiteManagement
                             for (int j = 0; j < arr.Count; j++)
                             {
                                 var cell = ws.Cell(i + 2, j + 1);
-                                cell.Value = arr[j]?.ToString() ?? string.Empty;
+                                cell.Value = SafeCellValue(arr[j]?.ToString() ?? string.Empty);
                             }
                         }
                         else
                         {
                             var cell = ws.Cell(i + 2, 1);
-                            cell.Value = col?.ToString() ?? string.Empty;
+                            cell.Value = SafeCellValue(col?.ToString() ?? string.Empty);
                         }
                     }
                 }

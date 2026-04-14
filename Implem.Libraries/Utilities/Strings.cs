@@ -154,19 +154,31 @@ namespace Implem.Libraries.Utilities
 
         public static string NormalizeYenSymbol(this object self)
         {
+            return self.NormalizeYenSymbol(cultureInfo: CultureInfo.GetCultureInfo("ja-JP"));
+        }
+
+        public static string NormalizeYenSymbol(this object self, CultureInfo cultureInfo)
+        {
             if (self == null) return null;
             var value = self.ToString().Trim();
             if (value.IsNullOrEmpty())
             {
                 return value;
             }
-            if (value[0] == '\\' || value[0] == '￥')
+            var currencySymbol = cultureInfo?.NumberFormat?.CurrencySymbol;
+            if (currencySymbol != "¥" && currencySymbol != "￥")
             {
-                value = '¥' + value.Substring(1);
+                return value;
             }
-            else if (value.Length >= 2 && value[0] == '-' && (value[1] == '\\' || value[1] == '￥'))
+            if (value[0] == '\\' || value[0] == '¥' || value[0] == '￥')
             {
-                value = "-" + '¥' + value.Substring(2);
+                value = currencySymbol + value.Substring(1);
+            }
+            else if (value.Length >= 2
+                && value[0] == '-'
+                && (value[1] == '\\' || value[1] == '¥' || value[1] == '￥'))
+            {
+                value = "-" + currencySymbol + value.Substring(2);
             }
             return value;
         }

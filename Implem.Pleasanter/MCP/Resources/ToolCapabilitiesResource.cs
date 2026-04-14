@@ -18,8 +18,10 @@ Pleasanter MCP ツール概要
 ■ レコード操作(ItemsTool)
   GetItem: レコードID指定で詳細取得
   GetItems: サイトID指定でレコード一覧取得(viewJsonで絞り込み、offsetでページング)
-  CreateUpdateItemJson: 更新用JSON生成(日本語表示値→内部コード自動変換)
-  UpdateItem: レコード更新(CreateUpdateItemJsonの出力を渡す)
+  CreateItemJson: 作成・更新用JSON生成(日本語表示値→内部コード自動変換)
+  AddItem: レコード作成(CreateItemJsonの出力を渡す)
+  UpdateItem: レコード更新(CreateItemJsonの出力を渡す)
+  DeleteItem: レコード削除(レコードID指定)
 
 ■ サイト操作(SitesTool)
   GetSiteIdByTitle: サイト名→サイトID検索
@@ -34,11 +36,13 @@ Pleasanter MCP ツール概要
   AddView/GetView/GetViewIdByViewName/UpdateView/CopyView/DeleteView: 保存ビュー管理
 
 ■ メール送信(OutgoingMailsTool)
-  send_email: アイテムに関連するメール送信
+  SendEmail: アイテムに関連するメール送信
 
 ■ 推奨ワークフロー
   検索: GetSiteIdByTitle → CreateViewJson → GetItems
-  更新: GetItem → CreateUpdateItemJson → UpdateItem
+  作成: CreateItemJson → AddItem
+  更新: GetItem → CreateItemJson → UpdateItem
+  削除: DeleteItem
   ビュー保存: CreateViewJson → AddView
 
 ■ 検索モード(searchType)

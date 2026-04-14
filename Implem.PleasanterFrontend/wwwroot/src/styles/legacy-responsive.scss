@@ -914,6 +914,21 @@
         max-width: none;
     }
 
+    .CalendarBody {
+        .grid-wrap {
+            width: 90vw;
+            overflow: auto;
+        }
+        .grid {
+            width: 200vw !important;
+        }
+    }
+    .dashboard-calendar-container {
+        .grid-wrap {
+            width: calc(90vw - 20px - 32px - 20px);
+        }
+    }
+
     #CalendarTimePeriod,
     #CalendarFromTo,
     #CalendarMonth {

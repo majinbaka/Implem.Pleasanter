@@ -61,7 +61,7 @@ namespace Implem.Pleasanter.Controllers
             }).ToList();
             var attType = AttestationConveyancePreference.None;
             var residentKey = ResidentKeyRequirement.Required;
-            var userVerification = UserVerificationRequirement.Preferred;
+            var userVerification = PasskeyUserVerificationRequirement();
             var authenticatorSelection = new AuthenticatorSelection
             {
                 ResidentKey = residentKey,
@@ -90,7 +90,10 @@ namespace Implem.Pleasanter.Controllers
                     AttestationPreference = attType,
                     Extensions = exts
                 });
-                HttpContext.Session.SetString(Fido2AttestationOptions, options.ToJson());
+                PasskeyUtilities.SessionSet(
+                    context: context,
+                    key: Fido2AttestationOptions,
+                    value: options.ToJson());
                 json = new ResponseCollection()
                     .Invoke(
                     methodName: "passkeyRegister",
@@ -128,7 +131,15 @@ namespace Implem.Pleasanter.Controllers
             try
             {
                 var bodyData = JsonSerializer.Deserialize<AuthenticatorAttestationRawResponse>(context.Forms.Data("data"));
-                var optionsJson = HttpContext.Session.GetString(Fido2AttestationOptions);
+                var optionsJson = PasskeyUtilities.SessionGetString(
+                    context: context,
+                    key: Fido2AttestationOptions);
+                if (optionsJson.IsNullOrWhiteSpace())
+                {
+                    return Messages.ResponsePasskeyResponseInvalid(context: context)
+                        .ToJson();
+                }
+                PasskeyUtilities.SessionRemove(context: context, key: Fido2AttestationOptions);
                 var options = CredentialCreateOptions.FromJson(optionsJson);
                 var passkeys = new PasskeyCollection(
                     context: context,
@@ -212,7 +223,7 @@ namespace Implem.Pleasanter.Controllers
                 Extensions = true,
                 UserVerificationMethod = true
             };
-            var uv = UserVerificationRequirement.Discouraged;
+            var uv = PasskeyUserVerificationRequirement();
             var json = string.Empty;
             try
             {
@@ -222,16 +233,19 @@ namespace Implem.Pleasanter.Controllers
                     UserVerification = uv,
                     Extensions = exts
                 });
-                HttpContext.Session.SetString(Fido2AssertionOptions, options.ToJson());
+                PasskeyUtilities.SessionSet(
+                    context: context,
+                    key: Fido2AssertionOptions,
+                    value: options.ToJson());
                 json = new ResponseCollection()
                     .Invoke(
-                    methodName: "passkeyLogin",
-                    args: options.ToJson())
-                        .ToJson();
+                        methodName: "passkeyLogin",
+                        args: options.ToJson())
+                    .ToJson();
             }
             catch (System.Exception ex)
             {
-                json = Messages.ResponseInternalServerError(context: context)
+                json = Messages.ResponsePasskeyServerUnavailable(context: context)
                     .ToJson();
                 _ = new SysLogModel(
                     context: context,
@@ -260,7 +274,15 @@ namespace Implem.Pleasanter.Controllers
             {
                 var ss = SiteSettingsUtilities.UsersSiteSettings(context: context);
                 var clientResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(context.Forms.Data("data"));
-                var jsonOptions = HttpContext.Session.GetString(Fido2AssertionOptions);
+                var jsonOptions = PasskeyUtilities.SessionGetString(
+                    context: context,
+                    key: Fido2AssertionOptions);
+                if (jsonOptions.IsNullOrWhiteSpace())
+                {
+                    return Messages.ResponsePasskeyResponseInvalid(context: context)
+                        .ToJson();
+                }
+                PasskeyUtilities.SessionRemove(context: context, key: Fido2AssertionOptions);
                 var options = AssertionOptions.FromJson(jsonOptions);
                 var passkeys = new PasskeyCollection(
                     context: context,
@@ -312,7 +334,7 @@ namespace Implem.Pleasanter.Controllers
             }
             catch (System.Exception ex)
             {
-                json = Messages.ResponseInternalServerError(context: context)
+                json = Messages.ResponsePasskeyServerUnavailable(context: context)
                     .ToJson();
                 _ = new SysLogModel(
                     context: context,
@@ -523,6 +545,17 @@ namespace Implem.Pleasanter.Controllers
                 log.Finish(context: context, responseSize: json.Length);
             }
             return json;
+        }
+
+        private static UserVerificationRequirement PasskeyUserVerificationRequirement()
+        {
+            return Parameters.Authentication.PasskeyParameters.UserVerificationRequirement switch
+            {
+                "Required" => UserVerificationRequirement.Required,
+                "Preferred" => UserVerificationRequirement.Preferred,
+                "Discouraged" => UserVerificationRequirement.Discouraged,
+                _ => UserVerificationRequirement.Preferred
+            };
         }
     }
 }

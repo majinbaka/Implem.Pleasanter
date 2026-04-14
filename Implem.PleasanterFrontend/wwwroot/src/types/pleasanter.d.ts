@@ -1,3 +1,4 @@
+import type { Calendar } from '@fullcalendar/core';
 import { type Display } from '../scripts/generals/display';
 import { type Passkey } from '../scripts/generals/passkey';
 
@@ -29,6 +30,7 @@ declare global {
             resetEditorColumn: (target: JQuery<HTMLElement>) => void;
             loading: (target?: JQuery<HTMLBUTTONElement>) => void;
             loaded: () => void;
+            transition: (url: string) => void;
             enableColumns: (
                 event: Event,
                 $control: JQuery<HTMLElement>,
@@ -43,12 +45,28 @@ declare global {
                 isJoin?: boolean,
                 type?: string
             ) => void;
+            clearData: () => void;
+            saveScroll: () => void;
+            loadScroll: () => void;
+            setData: (target: JQuery<HTMLElement>) => void;
+            beginningMonth: (date: Date) => Date;
+            shortDateString: (date: Date) => string;
+            shortDate: (date: Date) => Date;
+            dateDiff: (unit: string, date1: Date, date2: Date) => number;
+            dateAdd: (unit: string, amount: number, date: Date) => Date;
+            dateTimeFormatString: (date: Date, format: string) => string;
+            fullCalendars: Record<string, Calendar>;
+            moveCalendar: (type: string, calendarSuffix: string | number) => void;
+            setCalendar: (suffix?: string) => void;
             modal?: Record<string, HTMLElement>;
         } & typeof Passkey &
             typeof Display;
     }
 
     const $p: Window['$p'];
+    const FullCalendar: {
+        Calendar: new (el: HTMLElement, optionOverrides?: Record<string, unknown>) => Calendar;
+    };
 }
 
 export {};

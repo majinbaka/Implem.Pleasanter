@@ -87,3 +87,8 @@ Env.json
 /Implem.Pleasanter/wwwroot/assets
 /Implem.Pleasanter/wwwroot/components/watch
 /Implem.Pleasanter/wwwroot/operations-tools
+
+# Claude / AI tools
+CLAUDE.md
+.claude/
+.serena/

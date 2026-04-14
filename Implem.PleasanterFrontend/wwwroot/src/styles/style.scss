@@ -4038,6 +4038,13 @@ body:has(input#Controller[value='syslogs']) {
         &.sunday {
             background-color: var(--commonColor02);
         }
+        &.today {
+            .weekly-day {
+                display: inline-block;
+                margin-bottom: -1px;
+                border-bottom: 2px solid var(--nonColor16);
+            }
+        }
     }
     thead {
         th {
@@ -4052,13 +4059,11 @@ body:has(input#Controller[value='syslogs']) {
     td {
         position: static;
         padding: 4px;
+        background-color: transparent;
         border-top: 1px solid var(--base-border);
         border-right: 1px solid var(--base-border);
         border-bottom: 0;
         border-left: 0;
-        &.hover {
-            background-color: var(--primaryColor);
-        }
         .day {
             display: inline-flex;
             align-items: center;
@@ -4076,16 +4081,31 @@ body:has(input#Controller[value='syslogs']) {
             }
         }
     }
+    tr:has(.is-weekly) {
+        td.today {
+            background-color: color-mix(in srgb, var(--primarySub04) 60%, transparent);
+            border-right: solid 1px var(--primaryColor);
+            border-left: solid 1px var(--primaryColor);
+        }
+        &:first-of-type {
+            td.today {
+                border-top: 0;
+            }
+        }
+        &:last-of-type {
+            td.today {
+                border-bottom: solid 1px var(--primaryColor);
+            }
+        }
+    }
     .dragging {
         color: var(--nonColor02);
     }
     .item {
-        margin: 4px 0 0;
         color: var(--base-text);
         border-style: solid;
         border-width: 1px;
         .title {
-            padding: 2px 0;
             color: var(--nonColor02);
             .ui-icon {
                 margin-top: -0.3em;
@@ -4107,10 +4127,10 @@ body:has(input#Controller[value='syslogs']) {
                 background-color: var(--primarySub04);
                 border-color: var(--primaryDark);
             }
+            &.changed {
+                background-color: yellow;
+            }
         }
-    }
-    .dummy {
-        margin: 4px 0 0;
     }
     .other-month {
         background-color: var(--base-dark-layer);

@@ -196,7 +196,7 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                             changedItemId: changedItemId,
                             calendarType: calendarType,
                             suffix: suffix,
-                            calendarFromTo: calendarFromTo))); ;
+                            calendarFromTo: calendarFromTo)));
             }
         }
 
@@ -254,8 +254,7 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                             context: context,
                             ss: ss,
                             mine: null) == true
-                        && timePeriod != "Yearly"
-                        && groupBy == null).ToOneOrZeroString())
+                        && timePeriod != "Yearly").ToOneOrZeroString())
                 .Hidden(
                     controlId: $"CalendarPrevious{suffix}",
                     value: Times.PreviousCalendar(
@@ -288,6 +287,9 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                             controlId: $"CalendarTimePeriod{suffix}",
                             value: timePeriod)
                         .Hidden(
+                            controlId: $"CalendarGroupByColumnName{suffix}",
+                            value: groupBy?.ColumnName)
+                        .Hidden(
                             controlId: $"CalendarJson{suffix}",
                             value: choices == null
                                 ? Json(
@@ -308,7 +310,8 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                                     dataRows: dataRows,
                                     changedItemId: changedItemId,
                                     showStatus: showStatus,
-                                    calendarType: calendarType))
+                                    calendarType: calendarType,
+                                    choices: choices))
                         .CalendarBodyTable(
                             context: context,
                             ss: ss,
@@ -423,7 +426,7 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                                         css: "calendar-to-monthly",
                                         href: "#",
                                         attributes: new HtmlAttributes()
-                                            .DataId(currentDate.ToString()),
+                                            .DataId(currentDate.ToString(Displays.YmdFormat(context: context))),
                                         action: () => hb
                                             .Text(text: currentDate.ToString(
                                                 "Y", context.CultureInfo()))));
@@ -445,7 +448,7 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                                     hb.Td(
                                         attributes: new HtmlAttributes()
                                             .Class("container")
-                                            .DataValue(value: choice.Key, _using: choice.Value != null)
+                                            .DataValue(value: choice.Key, allowEmpty: true, _using: choice.Value != null)
                                             .DataId(date.ToString("yyyy/M/d")),
                                         action: () => hb
                                             .Div());
@@ -515,7 +518,7 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                                                             != currentDate.ToLocal(context: context).Month
                                                                 ? " other-month"
                                                                 : string.Empty))
-                                                    .DataValue(value: choice.Key, _using: choice.Value != null)
+                                                    .DataValue(value: choice.Key, allowEmpty: true, _using: choice.Value != null)
                                                     .DataId(currentDate.ToString("yyyy/M/d")),
                                                 action: () => hb
                                                     .Div(action: () => hb
@@ -540,6 +543,9 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
             DateTime begin,
             Dictionary<string, ControlData> choices)
         {
+            var today = DateTime.Now.ToLocal(context: context).Date;
+            var beginLocal = begin.ToLocal(context: context);
+            var dateLocalMonth = date.ToLocal(context: context).Month;
             return hb.GridTable(
                 context: context,
                 id: ss.DashboardParts.Count == 0
@@ -557,10 +563,14 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                                 _using: groupBy != null);
                             for (var x = 0; x < 7; x++)
                             {
-                                hb.Th(css: DayOfWeekCss(x) + " calendar-header", action: () => hb
-                                    .Text(text: DayOfWeekString(
-                                        context: context,
-                                        x: x)));
+                                var currentDate = beginLocal.AddDays(x);
+                                var isToday = currentDate == today;
+                                var todayCss = isToday ? " today" : string.Empty;
+                                hb.Th(css: DayOfWeekCss(x) + " calendar-header" + todayCss, action: () => hb
+                                    .Span(css: "weekly-day", action: () => hb
+                                        .Text(currentDate.ToString(Displays.Get(
+                                            context: context,
+                                            id: "MdFormat"), context.CultureInfo()) + " (" + currentDate.ToString("ddd", context.CultureInfo()) + ")")));
                             }
                         }))
                     .TBody(action: () =>
@@ -575,28 +585,21 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                                     _using: choice.Value != null);
                                 for (var x = 0; x < 7; x++)
                                 {
-                                    var currentDate = begin.ToLocal(context: context).AddDays(x);
+                                    var currentDate = beginLocal.AddDays(x);
                                     hb.Td(
                                         attributes: new HtmlAttributes()
-                                            .Class("container" +
-                                                (currentDate == DateTime.Now.ToLocal(context: context).Date
+                                            .Class("container is-weekly" +
+                                                (currentDate == today
                                                     ? " today"
                                                     : string.Empty) +
-                                                (date.ToLocal(context: context).Month
-                                                    != currentDate.ToLocal(context: context).Month
-                                                        ? " other-month"
-                                                        : string.Empty))
-                                            .DataValue(value: choice.Key, _using: choice.Value != null)
+                                                (dateLocalMonth != currentDate.Month
+                                                    ? " other-month"
+                                                    : string.Empty))
+                                            .DataValue(value: choice.Key, allowEmpty: true, _using: choice.Value != null)
                                             .DataId(currentDate.ToString("yyyy/M/d")),
-                                        action: () => hb
-                                            .Div(action: () => hb
-                                                .Div(
-                                                    css: "day",
-                                                    action: () => hb
-                                                        .Text(currentDate.Day.ToString()))));
+                                        action: () => hb.Div());
                                 }
                             });
-
                         });
                     }));
         }
@@ -610,13 +613,14 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
             IEnumerable<DataRow> dataRows,
             long changedItemId,
             bool showStatus,
-            string calendarType)
+            string calendarType,
+            Dictionary<string, ControlData> choices = null)
         {
             if (calendarType == "Standard")
             {
                 return dataRows
                     .GroupBy(
-                        dataRow => dataRow.String(groupBy?.ColumnName),
+                        dataRow => GroupKey(groupBy, dataRow, choices),
                         dataRow =>
                             CreateCalendarElement(
                                 context: context,
@@ -638,7 +642,7 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
             } else {
                 return dataRows
                     .GroupBy(
-                        dataRow => dataRow.String(groupBy?.ColumnName),
+                        dataRow => GroupKey(groupBy, dataRow, choices),
                         dataRow =>
                             CreateFullCalendarElement(
                                 context: context,
@@ -658,6 +662,25 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                     })
                     .ToJson();
             }
+        }
+
+        private static string GroupKey(
+            Column groupBy,
+            DataRow dataRow,
+            Dictionary<string, ControlData> choices = null)
+        {
+            var key = dataRow.String(groupBy?.ColumnName);
+            if (key == string.Empty && choices != null)
+            {
+                var blankKey = choices
+                    .FirstOrDefault(o => o.Value == null || o.Value.Text.IsNullOrEmpty())
+                    .Key;
+                if (!blankKey.IsNullOrEmpty())
+                {
+                    key = blankKey;
+                }
+            }
+            return key;
         }
 
         private static string Json(
